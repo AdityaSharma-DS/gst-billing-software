@@ -1,0 +1,21 @@
+{
+  "name": "gst-billing-software",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-tenant GST Billing & Compliance SaaS — backend, web, and mobile.",
+  "workspaces": [
+    "apps/backend",
+    "apps/web",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace apps/backend run start:dev",
+    "dev:web": "npm --workspace apps/web run dev",
+    "build": "npm --workspace apps/backend run build && npm --workspace apps/web run build",
+    "prisma:generate": "npm --workspace apps/backend run prisma:generate",
+    "prisma:migrate": "npm --workspace apps/backend run prisma:migrate"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

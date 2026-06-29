@@ -1,0 +1,8 @@
+
+[10:37, 6/20/2026] Aditya: https://developer.gst.gov.in/apiportal/
+[10:37, 6/20/2026] Aditya: https://einv-apisandbox.nic.in/
+[10:37, 6/20/2026] Aditya: https://einvoice1.gst.gov.in/Others/MasterCodes
+[10:37, 6/20/2026] Aditya: https://einv-apisandbox.nic.in/master-codes-list.html
+[10:37, 6/20/2026] Aditya: https://docs.ewaybillgst.gov.in/apidocs/index.html
+[10:37, 6/20/2026] Aditya: https://docs.ewaybillgst.gov.in/apidocs/master-codes-list.html
+[10:37, 6/20/2026] Aditya: https://docs.ewaybillgst.gov.in/apidocs/sub-docType-mapping.html

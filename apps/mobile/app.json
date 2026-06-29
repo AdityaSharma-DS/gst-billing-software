@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "GST Billing",
+    "slug": "gst-billing",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["ios", "android"],
+    "splash": { "resizeMode": "contain", "backgroundColor": "#ffffff" },
+    "ios": { "supportsTablet": true },
+    "android": { "package": "in.gstbilling.app" }
+  }
+}

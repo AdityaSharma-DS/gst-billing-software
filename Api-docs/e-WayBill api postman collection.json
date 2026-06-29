@@ -1,0 +1,3064 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0",
+    "title": "E-WAYBILL-API",
+    "description": "E-WAYBILL-API"
+  },
+  "security": [
+    {
+      "OAuth2": [
+        "read"
+      ]
+    }
+  ],
+  "servers": [
+    {
+      "url": ""
+    }
+  ],
+  "basePath": "/",
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Authentication API"
+    },
+    {
+      "name": "Generate Eway Bill",
+      "description": "Generate Eway Bill"
+    },
+    {
+      "name": "Update PART-B/Vehicle Number",
+      "description": "Update PART-B/Vehicle Number"
+    },
+    {
+      "name": "Generate Consolidated Ewaybill",
+      "description": "Generate Consolidated Ewaybill"
+    },
+    {
+      "name": "Cancel E-Way bill",
+      "description": "Cancel E-Way bill"
+    },
+    {
+      "name": "Reject EwayBill",
+      "description": "Reject EwayBill"
+    },
+    {
+      "name": "Update Transporter",
+      "description": "Update Transporter"
+    },
+    {
+      "name": "Extend Validity of E-Way Bill",
+      "description": "Extend Validity of E-Way Bill"
+    },
+    {
+      "name": "Regenerate Consolidated E-Way Bill - Api",
+      "description": "Regenerate Consolidated E-Way Bill - Api"
+    },
+    {
+      "name": "Get EwayBill Details",
+      "description": "Get EwayBill Details"
+    },
+    {
+      "name": "Get EWay bill for transporter by Date",
+      "description": "Get EWay bill for transporter by Date"
+    },
+    {
+      "name": "Get EwayBills For Transporter By State",
+      "description": "Get EwayBills For Transporter By State"
+    },
+    {
+      "name": "Get EwayBills For Transporter By Gstin",
+      "description": "Get EwayBills For Transporter By Gstin"
+    },
+    {
+      "name": "Get EwayBill Report By Transporter assigned Date",
+      "description": "Get EwayBill Report By Transporter assigned Date"
+    },
+    {
+      "name": "Get Eway Bills By Date",
+      "description": "Get Eway Bills By Date"
+    },
+    {
+      "name": "Get Eway Bills Rejected By Others",
+      "description": "Get Eway Bills Rejected By Others"
+    },
+    {
+      "name": "Get Eway bills by parties",
+      "description": "Get Eway bills by parties"
+    },
+    {
+      "name": "Get consolidated e-way bill",
+      "description": "Get consolidated e-way bill"
+    },
+    {
+      "name": "Get EwayBill by Consigner",
+      "description": "Get EwayBill by Consigner"
+    },
+    {
+      "name": "Get Error List",
+      "description": "Get Error List"
+    },
+    {
+      "name": "Get GSTIN details",
+      "description": "Get GSTIN details"
+    },
+    {
+      "name": "GET Transin details",
+      "description": "GET Transin details"
+    },
+    {
+      "name": "GET HSN details",
+      "description": "GET HSN details"
+    },
+    {
+      "name": "Initiate Multi Vehicle Movement",
+      "description": "Initiate Multi Vehicle Movement"
+    },
+    {
+      "name": "Add Multi Vehicles",
+      "description": "Add Multi Vehicles"
+    },
+    {
+      "name": "Change Multi Vehicles",
+      "description": "Change Multi Vehicles"
+    }
+  ],
+  "paths": {
+    "/ewaybillapi/v1.03/authenticate": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Authentication Request",
+        "description": "Authentication Request",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "query",
+            "description": "User Name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "description": "Password",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/genewaybill": {
+      "post": {
+        "tags": [
+          "Generate Eway Bill"
+        ],
+        "summary": "Generate Eway Bill",
+        "description": "Generate Eway Bill",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "actFromStateCode",
+                  "actToStateCode",
+                  "docDate",
+                  "docNo",
+                  "docType",
+                  "fromGstin",
+                  "fromPincode",
+                  "fromStateCode",
+                  "itemList",
+                  "subSupplyType",
+                  "supplyType",
+                  "toGstin",
+                  "toPincode",
+                  "toStateCode",
+                  "totInvValue",
+                  "transDistance",
+                  "transMode",
+                  "transactionType"
+                ],
+                "type": "object",
+                "properties": {
+                  "supplyType": {
+                    "maxLength": 1,
+                    "minLength": 1,
+                    "type": "string",
+                    "description": "Supply Type",
+                    "example": "O",
+                    "enum": [
+                      "O",
+                      "I"
+                    ]
+                  },
+                  "subSupplyType": {
+                    "type": "string",
+                    "description": "Sub Supply Type",
+                    "example": "1"
+                  },
+                  "subSupplyDesc": {
+                    "maxLength": 20,
+                    "type": "string",
+                    "description": "Other Sub Supply Description",
+                    "example": " "
+                  },
+                  "docType": {
+                    "type": "string",
+                    "description": "Document Type",
+                    "example": "INV",
+                    "enum": [
+                      "INV",
+                      "CHL",
+                      "BIL",
+                      "BOE",
+                      "CNT",
+                      "OTH"
+                    ]
+                  },
+                  "docNo": {
+                    "maxLength": 16,
+                    "type": "string",
+                    "description": "Document Number (Alphanumeric with / and - are allowed)",
+                    "example": "ebill/06/2020"
+                  },
+                  "docDate": {
+                    "pattern": "[0-3][0-9]/[0-1][0-9]/[2][0][1-2][0-9]",
+                    "type": "string",
+                    "description": "Document Date",
+                    "example": "05/02/2020"
+                  },
+                  "fromGstin": {
+                    "maxLength": 15,
+                    "minLength": 3,
+                    "pattern": "([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9][A-Z][0-9|A-Z])|(URP)",
+                    "type": "string",
+                    "description": "From GSTIN (Supplier or Consignor)",
+                    "example": "05AAACH6188F1ZM"
+                  },
+                  "fromTrdName": {
+                    "maxLength": 100,
+                    "type": "string",
+                    "description": "From Trade Name (Consignor Trade name)",
+                    "example": "welton"
+                  },
+                  "fromAddr1": {
+                    "maxLength": 120,
+                    "type": "string",
+                    "description": "From Address Line 1 (Valid Special Chars #,-,/)",
+                    "example": "2ND CROSS NO 59  19  A"
+                  },
+                  "fromAddr2": {
+                    "maxLength": 120,
+                    "type": "string",
+                    "description": "From Address Line 2(Valid Special Chars # , - ,/)",
+                    "example": "GROUND FLOOR OSBORNE ROAD"
+                  },
+                  "fromPlace": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "From Place",
+                    "example": "FRAZER TOWN"
+                  },
+                  "actFromStateCode": {
+                    "maximum": 99,
+                    "type": "integer",
+                    "description": "Actual From State Code",
+                    "example": 5
+                  },
+                  "fromPincode": {
+                    "maximum": 999999,
+                    "minimum": 100000,
+                    "type": "integer",
+                    "description": "From Pincode",
+                    "example": 263652
+                  },
+                  "fromStateCode": {
+                    "maximum": 99,
+                    "type": "integer",
+                    "description": "From State Code",
+                    "example": 5
+                  },
+                  "toGstin": {
+                    "maxLength": 15,
+                    "minLength": 3,
+                    "pattern": "([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9][A-Z][0-9|A-Z])|(URP)",
+                    "type": "string",
+                    "description": "To GSTIN (Consignee or Recipient)",
+                    "example": "02EHFPS5910D2Z0"
+                  },
+                  "toTrdName": {
+                    "maxLength": 100,
+                    "type": "string",
+                    "description": "To Trade Name (Consignee Trade name or Recipient Trade name)",
+                    "example": "sthuthya"
+                  },
+                  "toAddr1": {
+                    "maxLength": 120,
+                    "type": "string",
+                    "description": "To Address Line 1 (Valid Special Chars #,-,/)",
+                    "example": "Shree Nilaya"
+                  },
+                  "toAddr2": {
+                    "maxLength": 120,
+                    "type": "string",
+                    "description": "To Address Line 2 (Valid Special Chars #,-,/)",
+                    "example": "Dasarahosahalli"
+                  },
+                  "toPlace": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "To Place",
+                    "example": "Beml Nagar"
+                  },
+                  "toPincode": {
+                    "type": "integer",
+                    "description": "To Pincode",
+                    "example": 176036
+                  },
+                  "actToStateCode": {
+                    "maximum": 99,
+                    "type": "integer",
+                    "description": "Actual To State Code",
+                    "example": 2
+                  },
+                  "toStateCode": {
+                    "maximum": 99,
+                    "type": "integer",
+                    "description": "To State Code",
+                    "example": 2
+                  },
+                  "transactionType": {
+                    "maximum": 4,
+                    "type": "integer",
+                    "description": "Transaction type",
+                    "example": 4
+                  },
+                  "dispatchFromGSTIN": {
+                    "maxLength": 15,
+                    "minLength": 15,
+                    "pattern": "[0-9]{2}[0-9|A-Z]{13}",
+                    "type": "string",
+                    "description": "GSTIN of Dispatch-From ",
+                    "example": "29AAAAA1303P1ZV"
+                  },
+                  "dispatchFromTradeName": {
+                    "maxLength": 100,
+                    "type": "string",
+                    "description": "Trade name of Dispatch-From",
+                    "example": "ABC Traders"
+                  },
+                  "shipToGSTIN": {
+                    "maxLength": 15,
+                    "minLength": 15,
+                    "pattern": "[0-9]{2}[0-9|A-Z]{13}",
+                    "type": "string",
+                    "description": "GSTIN of Ship-To",
+                    "example": "29ALSPR1722R1Z3"
+                  },
+                  "shipToTradeName": {
+                    "maxLength": 100,
+                    "type": "string",
+                    "description": "Trade name of Ship-To",
+                    "example": "XYZ Traders"
+                  },
+                  "totalValue": {
+                    "multipleOf": 0.01,
+                    "type": "number",
+                    "description": "Sum of Taxable value and Tax value",
+                    "example": 56099
+                  },
+                  "cgstValue": {
+                    "multipleOf": 0.01,
+                    "type": "number",
+                    "description": "CGST value",
+                    "example": 0
+                  },
+                  "sgstValue": {
+                    "multipleOf": 0.01,
+                    "type": "number",
+                    "description": "SGST value",
+                    "example": 0
+                  },
+                  "igstValue": {
+                    "multipleOf": 0.01,
+                    "type": "number",
+                    "description": "IGST value",
+                    "example": 300.67
+                  },
+                  "cessValue": {
+                    "multipleOf": 0.01,
+                    "type": "number",
+                    "description": "Cess value",
+                    "example": 400.56
+                  },
+                  "cessNonAdvolValue": {
+                    "multipleOf": 0.01,
+                    "type": "number",
+                    "description": "Cess value",
+                    "example": 400
+                  },
+                  "totInvValue": {
+                    "multipleOf": 0.01,
+                    "type": "number",
+                    "description": "Total Invoice Value",
+                    "example": 68358
+                  },
+                  "transMode": {
+                    "type": "string",
+                    "description": "Mode of transport (Road-1, Rail-2, Air-3, Ship-4) ",
+                    "example": "1",
+                    "enum": [
+                      "1",
+                      "2",
+                      "3",
+                      "4"
+                    ]
+                  },
+                  "transDistance": {
+                    "type": "string",
+                    "description": "Distance (<4000 km) ",
+                    "example": "656"
+                  },
+                  "transporterName": {
+                    "maxLength": 100,
+                    "type": "string",
+                    "description": "Name of the transporter",
+                    "example": ""
+                  },
+                  "transporterId": {
+                    "type": "string",
+                    "description": "15 Digit Transporter GSTIN/TRANSIN",
+                    "example": "05AAACG0904A1ZL"
+                  },
+                  "transDocNo": {
+                    "maxLength": 15,
+                    "type": "string",
+                    "description": "Transport Document Number (Alphanumeric with / and – are allowed)",
+                    "example": "12"
+                  },
+                  "transDocDate": {
+                    "type": "string",
+                    "description": "Transport Document Date",
+                    "example": ""
+                  },
+                  "vehicleNo": {
+                    "maxLength": 10,
+                    "type": "string",
+                    "description": "Vehicle Number",
+                    "example": "APR3214"
+                  },
+                  "vehicleType": {
+                    "type": "string",
+                    "description": "Vehicle Type",
+                    "example": "R"
+                  },
+                  "itemList": {
+                    
+                  "type": "array",
+                  "items": 
+                    {
+                      "type": "object",
+                      "properties": {
+                        "productName": {
+                          "type": "string",
+                          "maxLength": 100,
+                          "description": "Product / Item Name",
+                          "example": "Wheat"
+                        },
+                        "productDesc": {
+                          "type": "string",
+                          "maxLength": 100,
+                          "description": "Product / Item description",
+                          "example": "Wheat"
+                        },
+                        "hsnCode": {
+                          "type": "number",
+                          "description": "HSN Code",
+                          "example": 1001
+                        },
+                        "quantity": {
+                          "type": "number",
+                          "description": "Quantity",
+                          "example": 4
+                        },
+                        "qtyUnit": {
+                          "type": "string",
+                          "maxLength": 3,
+                          "minLength": 3,
+                          "description": "Unit",
+                          "example": "BOX"
+                        },
+                        "taxableAmount": {
+                          "type": "number",
+                          "multipleOf": 0.01,
+                          "description": "Taxable Amount",
+                          "example": 56099
+                        },
+                        "sgstRate": {
+                          "type": "number",
+                          "multipleOf": 0.001,
+                          "description": "SGST Rate of Tax",
+                          "example": 0
+                        },
+                        "cgstRate": {
+                          "type": "number",
+                          "multipleOf": 0.001,
+                          "description": "CGST Rate of Tax",
+                          "example": 0
+                        },
+                        "igstRate": {
+                          "type": "number",
+                          "multipleOf": 0.001,
+                          "description": "IGST Rate of Tax",
+                          "example": 3
+                        },
+                        "cessRate": {
+                          "type": "number",
+                          "multipleOf": 0.001,
+                          "description": "Cess Rate of Tax",
+                          "example": 0
+                        }
+                      }
+                    }
+                
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/vehewb": {
+      "post": {
+        "tags": [
+          "Update PART-B/Vehicle Number"
+        ],
+        "summary": "Update PART-B/Vehicle Number",
+        "description": "Update PART-B/Vehicle Number",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "fromPlace",
+                  "fromState",
+                  "reasonCode",
+                  "reasonRem",
+                  "transMode"
+                ],
+                "type": "object",
+                "properties": {
+                  "ewbNo": {
+                    "type": "number",
+                    "description": "Ewaybill Number",
+					"example": 381009282489
+                  },
+                  "vehicleNo": {
+                    "type": "string",
+                    "description": "Vehicle Number",
+					"example": "ABC1234"
+                  },
+                  "fromPlace": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "From Place",
+					"example": "FRAZER TOWN"
+                  },
+                  "fromState": {
+                    "maximum": 99,
+                    "type": "integer",
+                    "description": "From State",
+					"example": 5
+                  },
+                  "reasonCode": {
+                    "maxLength": 1,
+                    "minLength": 1,
+                    "type": "string",
+                    "description": "Reason Code",
+					"example": "1"
+                  },
+                  "reasonRem": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "Remarks",
+					"example": "Due to Break Down"
+                  },
+                  "transDocNo": {
+                    "maxLength": 15,
+                    "type": "string",
+                    "description": "Transport Document Number",
+					"example": "12"
+                  },
+                  "transDocDate": {
+                    "pattern": "[0-3][0-9]/[0-1][0-9]/[2][0][1-2][0-9]",
+                    "type": "string",
+                    "description": "Transport Document Date",
+					"example": "20/02/2024"
+                  },
+                  "transMode": {
+                    "type": "string",
+                    "description": "Transport Mode",
+					"example": "1"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/gencewb": {
+      "post": {
+        "tags": [
+          "Generate Consolidated Ewaybill"
+        ],
+        "summary": "Generate Consolidated Ewaybill",
+        "description": "Generate Consolidated Ewaybill ",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "fromPlace",
+                  "fromState",
+                  "transMode",
+                  "tripSheetEwbBills"
+                ],
+                "type": "object",
+                "properties": {
+                  "fromPlace": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "From Place",
+					"example": "FRAZER TOWN"
+                  },
+                  "fromState": {
+                    "type": "number",
+                    "description": "From State",
+					"example": 5
+                  },
+                  "vehicleNo": {
+                    "type": "string",
+                    "description": "Vehicle Number",
+					"example": "ABC1234"
+                  },
+                  "transMode": {
+                    "type": "string",
+                    "description": "Transport Mode (Road-1,Rail-2,Air-3,Ship-4)",
+                    "enum": [
+                      "1",
+                      "2",
+                      "3",
+                      "4"
+                    ],
+					"example": "1"
+                  },
+                  "transDocNo": {
+                    "maxLength": 15,
+                    "type": "string",
+                    "description": "Transport Document Number ",
+					"example": "12"
+                  },
+                  "transDocDate": {
+                    "pattern": "[0-3][0-9]/[0-1][0-9]/[2][0][1-2][0-9]",
+                    "type": "string",
+                    "description": "Transport Document Date ",
+					"example": "20/02/2024"
+                  },
+                  "tripSheetEwbBills": {
+                    "type": "array",
+                  "items": 
+                    {
+                      "type": "object",
+                      "properties": {
+                        "ewbNo": {
+                          "type": "number",
+                          "description": "Ewaybill Number",
+						  "example": 381009282489
+                        }
+                      },
+                      "required": [
+                        "ewbNo"
+                      ]
+                    }
+                  
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/canewb": {
+      "post": {
+        "tags": [
+          "Cancel E-Way bill"
+        ],
+        "summary": "Cancel E-Way bill",
+        "description": "Cancel E-Way bill",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "cancelRsnCode",
+                  "ewbNo"
+                ],
+                "type": "object",
+                "properties": {
+                  "ewbNo": {
+                    "type": "number",
+                    "description": "EwayBill Number",
+					"example": 381009282489
+				},
+                  "cancelRsnCode": {
+                    "type": "number",
+                    "description": "Reason for cancellation",
+					"example": 2
+                  },
+                  "cancelRmrk": {
+                    "type": "string",
+                    "description": "Remarks",
+					"example": "Order Cancelled"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/rejewb": {
+      "post": {
+        "tags": [
+          "Reject EwayBill"
+        ],
+        "summary": "Reject EwayBill",
+        "description": "Reject EwayBill",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "ewbNo"
+                ],
+                "type": "object",
+                "properties": {
+                  "ewbNo": {
+                    "type": "number",
+                    "description": "EwayBill Number",
+					"example": 311009282644
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/updatetransporter": {
+      "post": {
+        "tags": [
+          "Update Transporter"
+        ],
+        "summary": "Update Transporter",
+        "description": "Update Transporter",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ewbNo": {
+                    "type": "number",
+                    "description": "EwayBill Number",
+					"example": 381009282489
+                  },
+                  "transporterId": {
+                    "type": "string",
+                    "description": "15 Digit Transporter GSTIN/TRANSIN",
+					"example": "05AAACG0904A1ZL"
+                  }
+                }
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/extendvalidity": {
+      "post": {
+        "tags": [
+          "Extend Validity of E-Way Bill"
+        ],
+        "summary": "Extend Validity of E-Way Bill",
+        "description": "Extend Validity of E-Way Bill",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "ewbNo",
+                  "extnRemarks",
+                  "extnRsnCode",
+                  "fromPincode",
+                  "fromPlace",
+                  "fromState",
+                  "remainingDistance"
+                ],
+                "type": "object",
+                "properties": {
+                  "ewbNo": {
+                    "type": "number",
+                    "description": "Ewaybill Number",
+					"example": 381009282489
+                  },
+                  "vehicleNo": {
+                    "type": "string",
+                    "description": "Vehicle Number",
+					"example": "ABC1234"
+                  },
+                  "fromPlace": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "From Place",
+					"example": "FRAZER TOWN"
+                  },
+                  "fromState": {
+                    "maximum": 99,
+                    "type": "integer",
+                    "description": "From State",
+					"example": 5
+                  },
+                  "remainingDistance": {
+                    "type": "number",
+                    "description": "Remaining Distance",
+					"example": 50
+                  },
+                  "transDocNo": {
+                    "maxLength": 15,
+                    "type": "string",
+                    "description": "Transport Document Number",
+					"example": "12"
+                  },
+                  "transDocDate": {
+                    "pattern": "[0-3][0-9]/[0-1][0-9]/[2][0][1-2][0-9]",
+                    "type": "string",
+                    "description": "Transport Document Date",
+					"example": "20/02/2024"
+                  },
+                  "transMode": {
+                    "type": "string",
+                    "description": "Transport Mode",
+					"example": "1"
+                  },
+                  "extnRsnCode": {
+                    "type": "number",
+                    "description": "Extension Reason Code",
+					"example": 1
+                  },
+                  "extnRemarks": {
+                    "type": "string",
+                    "description": "Extension Remarks",
+					"example": "Nature Calamity"
+                  },
+                  "fromPincode": {
+                    "type": "number",
+                    "description": "From Pincode",
+					"example": 263652
+                  },
+                  "consignmentStatus": {
+                    "type": "string",
+                    "description": "consignmentStatus(T)",
+					"example": "M"
+                  },
+                  "transitType": {
+                    "type": "string",
+                    "description": "transit Type",
+					"example": "R"
+                  },
+                  "addressLine1": {
+                    "type": "string",
+                    "description": "addressLine1",
+					"example": "Beml Nagar"
+                  },
+                  "addressLine2": {
+                    "type": "string",
+                    "description": "addressLine2",
+					"example": "Beml Nagar"
+                  },
+                  "addressLine3": {
+                    "type": "string",
+                    "description": "addressLine3",
+					"example": "Beml Nagar"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/regentripsheet": {
+      "post": {
+        "tags": [
+          "Regenerate Consolidated E-Way Bill - Api"
+        ],
+        "summary": "Regenerate Consolidated E-Way Bill - Api",
+        "description": "Regenerate Consolidated E-Way Bill - Api",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "fromPlace",
+                  "fromState",
+                  "reasonCode",
+                  "reasonRem",
+                  "transMode",
+                  "tripSheetNo"
+                ],
+                "type": "object",
+                "properties": {
+                  "tripSheetNo": {
+                    "type": "number",
+                    "description": "TripSheetNo Number",
+					"example": 3010009432
+                  },
+                  "vehicleNo": {
+                    "type": "string",
+                    "description": "Vehicle Number",
+					"example": "ABC1234"
+                  },
+                  "fromPlace": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "From Place",
+					"example": "FRAZER TOWN"
+                  },
+                  "fromState": {
+                    "maximum": 99,
+                    "type": "integer",
+                    "description": "From State",
+					"example": 5
+                  },
+                  "reasonCode": {
+                    "maxLength": 1,
+                    "minLength": 1,
+                    "type": "string",
+                    "description": "Reason Code",
+					"example": "1"
+                  },
+                  "reasonRem": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "Remarks",
+					"example": "Natural Calamity"
+                  },
+                  "transDocNo": {
+                    "maxLength": 15,
+                    "type": "string",
+                    "description": "Transport Document Number",
+					"example": "12"
+                  },
+                  "transDocDate": {
+                    "pattern": "[0-3][0-9]/[0-1][0-9]/[2][0][1-2][0-9]",
+                    "type": "string",
+                    "description": "Transport Document Date",
+					"example": "20/02/2024"
+                  },
+                  "transMode": {
+                    "type": "string",
+                    "description": "Transport Mode",
+					"example": "1"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/getewaybill": {
+      "get": {
+        "tags": [
+          "Get EwayBill Details"
+        ],
+        "summary": "Get EwayBill Details",
+        "description": "Get EwayBill Details",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ewbNo",
+            "in": "query",
+            "description": "ewbNo",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/getewaybillsfortransporter": {
+      "get": {
+        "tags": [
+          "Get EWay bill for transporter by Date"
+        ],
+        "summary": "Get eway bill assigned to you (requesting GSTIN) for a transportation – Particular Date",
+        "description": "Get eway bill assigned to you (requesting GSTIN) for a transportation – Particular Date",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "E-way bill generated Date(dd/MM/YYYY)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/getewaybillreportbytransporterassigneddate": {
+      "get": {
+        "tags": [
+          "Get EwayBill Report By Transporter assigned Date"
+        ],
+        "summary": "Get eway bill assigned to you (requesting GSTIN) for a transportation - Particular Date",
+        "description": "Get eway bill assigned to you (requesting GSTIN) for a transportation - Particular Date",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "E-way bill generated Date(dd/MM/YYYY)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stateCode",
+            "in": "query",
+            "description": "State code of the generator of the E-waybill",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/getewaybillsbydate": {
+      "get": {
+        "tags": [
+          "Get Eway Bills By Date"
+        ],
+        "summary": "Get eway bills assigned to you (requesting GSTIN) for a Particular Date",
+        "description": "Get eway bills assigned to you (requesting GSTIN) for a Particular Date",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "E-way bill generated Date(dd/MM/YYYY)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/getewaybillsrejectedbyothers": {
+      "get": {
+        "tags": [
+          "Get Eway Bills Rejected By Others"
+        ],
+        "summary": "Get eway bills rejected by others for a Particular Date",
+        "description": "Get eway bills rejected by others for a Particular Date",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "E-way bill generated Date(dd/MM/YYYY)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/getewaybillsfortransporterbygstin": {
+      "get": {
+        "tags": [
+          "Get EwayBills For Transporter By Gstin"
+        ],
+        "summary": "Get eway bill assigned to you (requesting GSTIN) for transportation – Particular GSTIN and Date",
+        "description": "Get eway bill assigned to you (requesting GSTIN) for transportation – Particular GSTIN and Date",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Gen_gstin",
+            "in": "query",
+            "description": "GSTIN of E-way bill generator",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "E-way bill generated Date(dd/MM/YYYY)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/getewaybillsfortransporterbystate": {
+      "get": {
+        "tags": [
+          "Get EwayBills For Transporter By State"
+        ],
+        "summary": "Get eway bill assigned to you (requesting GSTIN) for transportation – Particular State and Date",
+        "description": "Get eway bill assigned to you (requesting GSTIN) for transportation – Particular State and Date",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stateCode",
+            "in": "query",
+            "description": "State Code of E-way bill generator",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "E-way bill generated Date(dd/MM/YYYY)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/getewaybillsofotherparty": {
+      "get": {
+        "tags": [
+          "Get Eway bills by parties"
+        ],
+        "summary": "Get e-way bills generated on you (requesting GSTIN) by other parties",
+        "description": "Get e-way bills generated on you (requesting GSTIN) by other parties",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "E-way bill generated Date(dd/MM/YYYY)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/gettripsheet": {
+      "get": {
+        "tags": [
+          "Get consolidated e-way bill"
+        ],
+        "summary": "Get consolidated e-way bill",
+        "description": "Get consolidated e-way bill",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tripSheetNo",
+            "in": "query",
+            "description": "Consolidated E-way bill number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/getewaybillgeneratedbyconsigner": {
+      "get": {
+        "tags": [
+          "Get EwayBill by Consigner"
+        ],
+        "summary": "Get e-way bill details for a Document Type and Document number.",
+        "description": "Get e-way bill details for a Document Type and Document number.",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "docType",
+            "in": "query",
+            "description": "Document Type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "docNo",
+            "in": "query",
+            "description": "Document number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/gettransporterdetails": {
+      "get": {
+        "tags": [
+          "GET Transin details"
+        ],
+        "summary": "GET Transin details",
+        "description": "GET Transin details",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "trn_no",
+            "in": "query",
+            "description": "Transporter GSTIN  or Transin for which the details are required",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/initmulti": {
+      "post": {
+        "tags": [
+          "Initiate Multi Vehicle Movement"
+        ],
+        "summary": "Initiate Multi Vehicle Movement",
+        "description": "Initiate Multi Vehicle Movement",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "ewbNo",
+                  "fromPlace",
+                  "fromState",
+                  "reasonCode",
+                  "reasonRem",
+                  "toPlace",
+                  "toState",
+                  "totalQuantity",
+                  "transMode",
+                  "unitCode"
+                ],
+                "type": "object",
+                "properties": {
+                  "ewbNo": {
+                    "type": "number",
+                    "description": "Ewaybill Number",
+					"example": 381009282489
+                  },
+                  "fromPlace": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "Place of Consignor",
+					"example": "FRAZER TOWN"
+                  },
+                  "fromState": {
+                    "maximum": 2,
+                    "type": "integer",
+                    "description": "State of Consignor",
+					"example": 5
+                  },
+                  "toPlace": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "Place of Consinee",
+					"example": "Beml Nagar"
+                  },
+                  "toState": {
+                    "maximum": 2,
+                    "type": "integer",
+                    "description": "State of Consinee",
+					"example": 2
+                  },
+                  "reasonCode": {
+                    "maxLength": 1,
+                    "minLength": 1,
+                    "type": "string",
+                    "description": "Reason Code",
+					"example": "1"
+                  },
+                  "reasonRem": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "Remarks",
+					"example": "Due to Break Down"
+                  },
+                  "totalQuantity": {
+                    "type": "integer",
+                    "description": "Total Quantity",
+					"example": 1
+                  },
+                  "unitCode": {
+                    "maxLength": 3,
+                    "type": "string",
+                    "description": "Unit Code",
+					"example": "BOX"
+                  },
+                  "transMode": {
+                    "type": "string",
+                    "description": "Transport Mode",
+					"example": "1"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/addmulti": {
+      "post": {
+        "tags": [
+          "Add Multi Vehicles"
+        ],
+        "summary": "Add Multi Vehicles",
+        "description": "Add Multi Vehicles",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "ewbNo",
+                  "groupNo",
+                  "quantity",
+                  "transDocDate",
+                  "transDocNo",
+                  "vehicleNo"
+                ],
+                "type": "object",
+                "properties": {
+                  "ewbNo": {
+                    "type": "number",
+                    "description": "Ewaybill Number",
+					"example": 381009282489
+                  },
+                  "vehicleNo": {
+                    "type": "string",
+                    "description": "Vehicle Number",
+					"example": "ABC1234"
+                  },
+                  "groupNo": {
+                    "type": "number",
+                    "description": "Group Number",
+					"example": 1
+                  },
+                  "transDocNo": {
+                    "maxLength": 15,
+                    "type": "string",
+                    "description": "Transport Document Number",
+					"example": "12"
+                  },
+                  "transDocDate": {
+                    "pattern": "[0-3][0-9]/[0-1][0-9]/[2][0][1-2][0-9]",
+                    "type": "string",
+                    "description": "Transport Document Date",
+					"example": "20/02/2024"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "description": "Quantity",
+					"example": 1
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/updtmulti": {
+      "post": {
+        "tags": [
+          "Change Multi Vehicles"
+        ],
+        "summary": "Change Multi Vehicles",
+        "description": "Change Multi Vehicles",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "ewbNo",
+                  "fromPlace",
+                  "fromState",
+                  "groupNo",
+                  "newTranNo",
+                  "newVehicleNo",
+                  "oldTranNo",
+                  "oldvehicleNo",
+                  "reasonCode",
+                  "reasonRem"
+                ],
+                "type": "object",
+                "properties": {
+                  "ewbNo": {
+                    "type": "number",
+                    "description": "Ewaybill Number",
+					"example": 381009282489
+                  },
+                  "groupNo": {
+                    "type": "number",
+                    "description": "Group Number",
+					"example": 1
+                  },
+                  "oldvehicleNo": {
+                    "maxLength": 15,
+                    "type": "string",
+                    "description": "Old Vehicle Number",
+					"example": "ABC1234"
+                  },
+                  "newVehicleNo": {
+                    "maxLength": 15,
+                    "type": "string",
+                    "description": "New Vehicle Number",
+					"example": "ABC4321"
+                  },
+                  "oldTranNo": {
+                    "maxLength": 15,
+                    "type": "string",
+                    "description": "Old Tran Number",
+					"example": "sumitra/06/2020"
+                  },
+                  "newTranNo": {
+                    "maxLength": 15,
+                    "type": "string",
+                    "description": "New Tran Number",
+					"example": "sumitra/06/2021"
+                  },
+                  "fromPlace": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "Place of Consignor",
+					"example": "FRAZER TOWN"
+                  },
+                  "fromState": {
+                    "maximum": 2,
+                    "type": "integer",
+                    "description": "State of Consignor",
+					"example": 5
+                  },
+                  "reasonCode": {
+                    "maxLength": 1,
+                    "minLength": 1,
+                    "type": "string",
+                    "description": "Reason Code",
+					"example": "1"
+                  },
+                  "reasonRem": {
+                    "maxLength": 50,
+                    "type": "string",
+                    "description": "Remarks",
+					"example": "Due to Break Down"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/geterrorlist": {
+      "get": {
+        "tags": [
+          "Get Error List"
+        ],
+        "summary": "Get Error List",
+        "description": "Get Error List",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/getgstindetails": {
+      "get": {
+        "tags": [
+          "Get GSTIN details"
+        ],
+        "summary": "Get GSTIN details",
+        "description": "Get GSTIN details",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "GSTIN",
+            "in": "query",
+            "description": "GSTIN number for which the details are required",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ewaybillapi/v1.03/ewayapi/gethsndetailsbyhsncode": {
+      "get": {
+        "tags": [
+          "GET HSN details"
+        ],
+        "summary": "GET HSN details",
+        "description": "GET HSN details",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "User Email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hsncode",
+            "in": "query",
+            "description": "hsncode for which the details are required",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "header",
+            "description": "IP Address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "header",
+            "description": "Client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_secret",
+            "in": "header",
+            "description": "Client Secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gstin",
+            "in": "header",
+            "description": "GSTIN number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          
+          "404": {
+            "description": "Not Found. If requested entity is not found or if requested API is not found."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error Payload": {
+        "required": [
+          "code",
+          "desc",
+          "error_cd",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Error Message"
+          },
+          "error_cd": {
+            "type": "string",
+            "description": "Error Code"
+          },
+          "code": {
+            "type": "string",
+            "description": "Server Error Code"
+          },
+          "desc": {
+            "type": "string",
+            "description": "Server Error Description"
+          }
+        },
+        "description": "If anything goes wrong error payload will be return"
+      },
+      "Response": {
+        "required": [
+          "header",
+          "status_cd",
+          "status_desc"
+        ],
+        "type": "object",
+        "properties": {
+          "status_cd": {
+            "type": "string",
+            "description": "Status Code"
+          },
+          "status_desc": {
+            "type": "string",
+            "description": "Status Description"
+          },
+          "error": {
+            "$ref": "#/components/schemas/Error Payload"
+          },
+          "header": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Header Map"
+          },
+          "data": {
+            "type": "string",
+            "description": "GST response data"
+          }
+        },
+        "description": "Response which contains status code and header and data"
+      }
+    }
+  }
+}

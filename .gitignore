@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+.next/
+out/
+web-build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.bak
+*.bak
+!.env.example
+
+# Prisma
+apps/backend/prisma/*.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Mobile
+apps/mobile/.expo/
+apps/mobile/.expo-shared/
+*.jks
+*.keystore
+
+# Secrets / certs
+*.pem
+*.p12
+*.pfx
+dsc/

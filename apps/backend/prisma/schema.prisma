@@ -1,0 +1,448 @@
+// ────────────────────────────────────────────────────────────────────────────
+// GST Billing Software — Prisma schema (canonical data model)
+// PostgreSQL with Row-Level Security (RLS) on tenant-scoped tables.
+// RLS policies are defined in prisma/migrations/0001_init_rls/migration.sql
+// because Prisma does not model RLS directly.
+//
+// Convention: every tenant-scoped table has `tenantId` and is filtered by RLS
+// using the `app.current_tenant` session GUC set per request (see TenantMiddleware).
+// ────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Tenancy & Identity ──────────────────────────────
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  status    TenantStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizations Organization[]
+  users         User[]
+  vendors       Party[]
+  bills         Bill[]
+  subscription  Subscription?
+
+  @@map("tenants")
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+model Organization {
+  id            String   @id @default(uuid())
+  tenantId      String
+  legalName     String
+  tradeName     String?
+  gstin         String?
+  pan           String?
+  taxRegime     TaxRegime @default(REGULAR)
+  financialYear String   // e.g. "2026-27"
+  // Branding
+  logoUrl       String?
+  addressLine1  String?
+  addressLine2  String?
+  city          String?
+  state         String?   // GST state code drives intra/inter-state logic
+  stateCode     String?
+  pincode       String?
+  email         String?
+  phone         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("organizations")
+}
+
+enum TaxRegime {
+  REGULAR
+  COMPOSITION
+  UNREGISTERED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String
+  email        String
+  passwordHash String
+  fullName     String
+  role         UserRole @default(VIEWER)
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  ACCOUNTANT
+  VIEWER
+}
+
+// ───────────────────────── Vendor / Customer Master ────────────────────────
+
+model Party {
+  id            String    @id @default(uuid())
+  tenantId      String
+  type          PartyType
+  name          String
+  gstin         String?
+  pan           String?
+  contactPerson String?
+  email         String?
+  phone         String?
+  // Addresses (JSON for billing/shipping flexibility)
+  billingAddress  Json?
+  shippingAddress Json?
+  bankDetails     Json?
+  taxCategory   PartyTaxCategory @default(REGISTERED)
+  paymentTerms  String?   // COD, Credit 30, etc.
+  classification String?  // Raw material / Finished goods / Services
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bills  Bill[]
+
+  @@index([tenantId, type])
+  @@index([tenantId, gstin])
+  @@map("parties")
+}
+
+enum PartyType {
+  VENDOR
+  CUSTOMER
+}
+
+enum PartyTaxCategory {
+  REGISTERED
+  UNREGISTERED
+  COMPOSITION
+}
+
+// ───────────────────────── Billing Core ────────────────────────────────────
+
+model Bill {
+  id            String   @id @default(uuid())
+  tenantId      String
+  billNumber    String   // auto-generated, configurable format, unique per tenant
+  direction     BillDirection // INCOMING (purchase) / OUTGOING (sales)
+  status        BillStatus    @default(DRAFT)
+  billDate      DateTime
+  partyId       String?
+  placeOfSupply String?  // state code; drives CGST/SGST vs IGST
+  supplyType    SupplyType @default(B2B)
+  reverseCharge Boolean  @default(false)
+  // Money (stored in paise via Int, or Decimal). Use Decimal for accuracy.
+  subTotal      Decimal  @default(0) @db.Decimal(14, 2)
+  discountTotal Decimal  @default(0) @db.Decimal(14, 2)
+  cgstTotal     Decimal  @default(0) @db.Decimal(14, 2)
+  sgstTotal     Decimal  @default(0) @db.Decimal(14, 2)
+  igstTotal     Decimal  @default(0) @db.Decimal(14, 2)
+  cessTotal     Decimal  @default(0) @db.Decimal(14, 2)
+  roundOff      Decimal  @default(0) @db.Decimal(14, 2)
+  grandTotal    Decimal  @default(0) @db.Decimal(14, 2)
+  notes         String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  party     Party?         @relation(fields: [partyId], references: [id])
+  lineItems BillLineItem[]
+  invoice   Invoice?
+  irn       Irn?
+  eWayBill  EWayBill?
+
+  @@unique([tenantId, billNumber])
+  @@index([tenantId, direction, status])
+  @@index([tenantId, billDate])
+  @@map("bills")
+}
+
+enum BillDirection {
+  INCOMING // purchase
+  OUTGOING // sales
+}
+
+enum BillStatus {
+  DRAFT
+  APPROVED
+  VERIFIED
+  FINALIZED
+  CANCELLED
+}
+
+enum SupplyType {
+  B2B
+  B2CL // B2C large (> 2.5L)
+  B2CS // B2C small
+  EXPORT
+  SEZ
+  NIL_RATED
+  EXEMPTED
+}
+
+model BillLineItem {
+  id          String  @id @default(uuid())
+  tenantId    String
+  billId      String
+  description String
+  hsnSacCode  String?
+  quantity    Decimal @default(1) @db.Decimal(14, 3)
+  unit        String?
+  rate        Decimal @default(0) @db.Decimal(14, 2)
+  discount    Decimal @default(0) @db.Decimal(14, 2)
+  taxableValue Decimal @default(0) @db.Decimal(14, 2)
+  gstRate     Decimal @default(0) @db.Decimal(5, 2) // e.g. 18.00
+  cgst        Decimal @default(0) @db.Decimal(14, 2)
+  sgst        Decimal @default(0) @db.Decimal(14, 2)
+  igst        Decimal @default(0) @db.Decimal(14, 2)
+  cess        Decimal @default(0) @db.Decimal(14, 2)
+  lineTotal   Decimal @default(0) @db.Decimal(14, 2)
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, billId])
+  @@map("bill_line_items")
+}
+
+model Invoice {
+  id           String   @id @default(uuid())
+  tenantId     String
+  billId       String   @unique
+  invoiceNumber String
+  pdfUrl       String?
+  qrPayload    String?  // IRN QR (Phase 4)
+  language     String   @default("en") // en | hi
+  emailedAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, invoiceNumber])
+  @@map("invoices")
+}
+
+// ───────────────────────── GST Tax Rates ───────────────────────────────────
+
+model TaxRate {
+  id         String   @id @default(uuid())
+  hsnSacCode String
+  description String?
+  gstRate    Decimal  @db.Decimal(5, 2)
+  cessRate   Decimal? @db.Decimal(5, 2)
+  effectiveFrom DateTime?
+  source     String   @default("FASTGST") // FASTGST | MANUAL
+  fetchedAt  DateTime @default(now())
+
+  @@unique([hsnSacCode, gstRate])
+  @@index([hsnSacCode])
+  @@map("tax_rates")
+}
+
+// ───────────────────────── GST Returns ─────────────────────────────────────
+
+model GstReturn {
+  id          String   @id @default(uuid())
+  tenantId    String
+  returnType  ReturnType
+  period      String   // "MM-YYYY" or "Q1-YYYY"
+  status      ReturnStatus @default(DRAFT)
+  jsonUrl     String?  // archived generated JSON (versioned in S3)
+  version     Int      @default(1)
+  arn         String?  // acknowledgement / annual return number
+  filedAt     DateTime?
+  summary     Json?    // computed liability summary
+  validationErrors Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, returnType, period, version])
+  @@index([tenantId, returnType, period])
+  @@map("gst_returns")
+}
+
+enum ReturnType {
+  GSTR1
+  GSTR2B
+  GSTR3B
+  GSTR4
+  GSTR5
+  GSTR6
+  GSTR7
+  GSTR8
+  GSTR9
+}
+
+enum ReturnStatus {
+  DRAFT
+  VALIDATED
+  GENERATED
+  FILED
+  ERROR
+}
+
+// ───────────────────────── e-Invoicing & e-Way Bill ────────────────────────
+
+model Irn {
+  id          String   @id @default(uuid())
+  tenantId    String
+  billId      String   @unique
+  irn         String   @unique
+  ackNo       String?
+  ackDate     DateTime?
+  signedInvoice String? @db.Text
+  signedQrCode  String? @db.Text
+  status      IrnStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("irns")
+}
+
+enum IrnStatus {
+  ACTIVE
+  CANCELLED
+}
+
+model EWayBill {
+  id          String   @id @default(uuid())
+  tenantId    String
+  billId      String   @unique
+  ewbNo       String   @unique
+  ewbDate     DateTime?
+  validUpto   DateTime?
+  vehicleNo   String?
+  transporterId String?
+  status      EWayBillStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("eway_bills")
+}
+
+enum EWayBillStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+// ───────────────────────── Subscription & Payments ─────────────────────────
+
+model Plan {
+  id          String  @id @default(uuid())
+  name        String
+  interval    PlanInterval
+  priceInr    Decimal @db.Decimal(12, 2)
+  features    Json?
+  limits      Json?   // e.g. { bills: 1000, users: 5 }
+  trialDays   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+enum PlanInterval {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+model Subscription {
+  id          String   @id @default(uuid())
+  tenantId    String   @unique
+  planId      String
+  status      SubscriptionStatus @default(TRIALING)
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  autoRenew   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan     Plan      @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+model Payment {
+  id             String   @id @default(uuid())
+  tenantId       String
+  subscriptionId String?
+  provider       String   // razorpay | payu | stripe
+  providerRef    String?  // gateway order/payment id
+  amountInr      Decimal  @db.Decimal(12, 2)
+  status         PaymentStatus @default(PENDING)
+  receiptUrl     String?
+  createdAt      DateTime @default(now())
+
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([tenantId])
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+// ───────────────────────── Audit Trail (append-only) ───────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  tenantId   String
+  userId     String?
+  action     String   // CREATE | EDIT | APPROVE | DELETE | EXPORT | FILE
+  entity     String   // e.g. "Bill", "GstReturn"
+  entityId   String?
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  sessionId  String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, entity, entityId])
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}
