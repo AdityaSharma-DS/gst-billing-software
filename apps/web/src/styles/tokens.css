@@ -1,0 +1,58 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Design tokens — DONICY GST Billing Software.
+   Brand color sampled exactly from the Figma PDF export (#F6871F).
+   GST bill-status tokens are exact from the Figma "token" frame (13:142).
+   See design/design-system.md for provenance.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Typography (Inter — from the design HTML) */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-14: 56px;
+
+  /* Radius */
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-pill: 999px;
+
+  /* ── Brand (DONICY orange) — exact from design HTML (--accent / --accent-soft) ── */
+  --color-primary: #F68820;
+  --color-primary-hover: #E0760F;
+  --color-primary-300: #F8A353;
+  --color-primary-200: #FABF88;
+  --color-primary-100: #FBDDC0;
+  --color-primary-50:  #FDEEDF;
+
+  /* ── Surfaces / neutrals — sampled ── */
+  --color-bg: #F2F4F6;
+  --color-surface: #FFFFFF;
+  --color-sidebar: #FFFFFF;
+  --color-border: #E2E2E2;
+  --color-divider: #EFEFEF;
+  --color-text: #1F2024;
+  --color-text-muted: #8A8A8E;
+
+  /* ── Semantic ── */
+  --color-success: #0F6E56;
+  --color-danger: #A32D2D;
+  --color-warning: #854F0B;
+  --color-info: #185FA5;
+  --color-up: #1F9254;     /* positive deltas (green +5%) */
+  --color-down: #D14343;   /* negative deltas (red) */
+
+  /* ── Bill status tokens (exact from Figma 13:142) ── */
+  --status-draft-bg: #F1EFE8;       --status-draft-fg: #5F5E5A;
+  --status-approved-bg: #E6F1FB;    --status-approved-fg: #185FA5;
+  --status-verified-bg: #EEEDFE;    --status-verified-fg: #534AB7;
+  --status-finalized-bg: #E1F5EE;   --status-finalized-fg: #0F6E56;
+  --status-filed-bg: #EAF3DE;       --status-filed-fg: #3B6D11;
+  --status-overdue-bg: #FCEBEB;     --status-overdue-fg: #A32D2D;
+  --status-pending-bg: #FAEEDA;     --status-pending-fg: #854F0B;
+  --status-itc-blocked-bg: #FAECE7; --status-itc-blocked-fg: #993C1D;
+
+  --shadow-card: 0 1px 3px rgba(16,24,40,0.06), 0 1px 2px rgba(16,24,40,0.04);
+}

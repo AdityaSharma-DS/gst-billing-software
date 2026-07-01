@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { Logo } from '../components/Logo';
 
 export function Login() {
   const navigate = useNavigate();
@@ -23,14 +24,23 @@ export function Login() {
   }
 
   return (
-    <div className="login-wrap">
-      <form className="login-card" onSubmit={onSubmit}>
-        <h1>GST Billing</h1>
+    <div className="auth-wrap">
+      <form className="auth-card" onSubmit={onSubmit}>
+        <div className="auth-logo"><Logo /></div>
+        <h1>Sign in</h1>
+        <p className="muted small">Don't have an account? <a>Register here</a></p>
+
         <label>Organization<input value={tenantSlug} onChange={(e) => setTenant(e.target.value)} /></label>
-        <label>Email<input value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-        <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+        <label>Email<input placeholder="Enter Your Email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+        <label>Password<input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+
+        <div className="auth-row">
+          <label className="checkbox"><input type="checkbox" /> Remember me</label>
+          <a className="small">Forgot password?</a>
+        </div>
+
         {error && <p className="error">{error}</p>}
-        <button type="submit">Sign in</button>
+        <button type="submit" className="btn-block">Sign in</button>
       </form>
     </div>
   );

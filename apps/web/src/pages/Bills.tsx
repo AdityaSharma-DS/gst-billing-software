@@ -31,7 +31,7 @@ export function Bills() {
               <td>{b.billNumber}</td>
               <td>{b.direction}</td>
               <td>{new Date(b.billDate).toLocaleDateString()}</td>
-              <td>{b.status}</td>
+              <td><span className={`badge badge--${b.status.toLowerCase()}`}>{b.status}</span></td>
               <td>₹{b.grandTotal}</td>
             </tr>
           ))}

@@ -18,6 +18,13 @@ web-build/
 *.bak
 !.env.example
 
+# Build artifacts
+*.tsbuildinfo
+
+# Large design binaries (kept locally; use Git LFS if they must be versioned)
+design/*.pdf
+design/*.fig
+
 # Prisma
 apps/backend/prisma/*.db
 

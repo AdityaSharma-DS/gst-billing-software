@@ -11,6 +11,8 @@ import { VendorsModule } from './modules/vendors/vendors.module';
 import { GstnModule } from './modules/gstn/gstn.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { AuditModule } from './modules/audit/audit.module';
     GstnModule,
     SubscriptionsModule,
     AuditModule,
+    DashboardModule,
+    ReportsModule,
   ],
 })
 export class AppModule implements NestModule {
