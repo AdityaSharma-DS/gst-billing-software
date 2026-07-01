@@ -1,0 +1,34 @@
+Proprietary Software License
+============================
+
+Copyright (c) 2026 Ramavath Nagesh (Developer) and Dasari Pavan Kumar (Client).
+All rights reserved.
+
+This software (the "GST Billing Software", brand "DONICY") is developed under a
+Software Development Agreement between the Developer and the Client.
+
+1. OWNERSHIP
+   Full source-code ownership transfers to the Client upon receipt of 100% of the
+   contract payment, as set out in the Software Development Agreement. Until then,
+   ownership is retained by the Developer.
+
+2. RESTRICTIONS
+   The source code developed under the Agreement shall not be reused, resold, or
+   redistributed to other parties for a period of one (1) year from project
+   completion. The Developer retains rights to generic frameworks, utilities, and
+   non-business-specific components.
+
+3. CONFIDENTIALITY
+   This repository and its contents are confidential and subject to the
+   confidentiality (NDA) terms of the Agreement. Do not distribute publicly.
+
+4. THIRD-PARTY COMPONENTS
+   Third-party libraries and APIs (e.g. GSTN/NIC services, payment gateways) are
+   governed by their respective licenses and terms.
+
+5. NO WARRANTY
+   The software is provided "as is", without warranty of any kind. The Developer is
+   not liable for GST filing errors arising from incorrect data input, to the extent
+   permitted by the Agreement and applicable law.
+
+For full terms, refer to the executed Software Development Agreement.
