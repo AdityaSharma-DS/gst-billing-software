@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/auth/roles.guard';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -19,5 +19,17 @@ export class VendorsController {
   @Roles('ADMIN', 'ACCOUNTANT')
   create(@CurrentTenant() tenantId: string, @Body() body: any) {
     return this.vendors.create(tenantId, body);
+  }
+
+  @Patch(':id')
+  @Roles('ADMIN', 'ACCOUNTANT')
+  update(@CurrentTenant() tenantId: string, @Param('id') id: string, @Body() body: any) {
+    return this.vendors.update(tenantId, id, body);
+  }
+
+  @Delete(':id')
+  @Roles('ADMIN', 'ACCOUNTANT')
+  remove(@CurrentTenant() tenantId: string, @Param('id') id: string) {
+    return this.vendors.remove(tenantId, id);
   }
 }

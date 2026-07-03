@@ -150,8 +150,15 @@ model Bill {
   tenantId      String
   billNumber    String   // auto-generated, configurable format, unique per tenant
   direction     BillDirection // INCOMING (purchase) / OUTGOING (sales)
+  documentType  DocumentType  @default(INVOICE)
+  invoiceType   String   @default("TAX") // TAX | PROFORMA | BILL_OF_SUPPLY
   status        BillStatus    @default(DRAFT)
   billDate      DateTime
+  dueDate       DateTime?
+  terms         String?
+  vendorInvoiceNo String?  // supplier's own invoice/bill number (purchases)
+  paymentStatus String   @default("UNPAID") // PAID | UNPAID | PARTIAL | OVERDUE
+  paymentMode   String?  // Cash | UPI | Bank Transfer | Card | Cheque
   partyId       String?
   placeOfSupply String?  // state code; drives CGST/SGST vs IGST
   supplyType    SupplyType @default(B2B)
@@ -163,9 +170,11 @@ model Bill {
   sgstTotal     Decimal  @default(0) @db.Decimal(14, 2)
   igstTotal     Decimal  @default(0) @db.Decimal(14, 2)
   cessTotal     Decimal  @default(0) @db.Decimal(14, 2)
+  otherCharges  Decimal  @default(0) @db.Decimal(14, 2) // handling, shipping, etc.
   roundOff      Decimal  @default(0) @db.Decimal(14, 2)
   grandTotal    Decimal  @default(0) @db.Decimal(14, 2)
   notes         String?
+  language      String   @default("en") // en | hi (invoice language)
   createdById   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -186,6 +195,12 @@ model Bill {
 enum BillDirection {
   INCOMING // purchase
   OUTGOING // sales
+}
+
+enum DocumentType {
+  INVOICE
+  CREDIT_NOTE
+  DELIVERY_CHALLAN
 }
 
 enum BillStatus {

@@ -1,10 +1,14 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { StatCard } from '../components/StatCard';
-import { IconClients, IconPurchases, IconReports } from '../components/icons';
+import { IconClients, IconPurchases, IconReports, IconSearch } from '../components/icons';
 
 interface Summary {
   customers: number; orders: number; revenue: number; netProfit: number;
+  incomingValue: number; outgoingValue: number;
+  billsToday: number; billsThisWeek: number; billsThisMonth: number; pendingApprovals: number;
   recentOrders: { id: string; product: string; category: string; price: number; status: string }[];
 }
 const inrK = (n: number) => '₹' + n.toLocaleString('en-IN');
@@ -54,6 +58,8 @@ function Gauge({ pct = 75.55 }: { pct?: number }) {
 }
 
 export function Dashboard() {
+  const nav = useNavigate();
+  const [q, setQ] = useState('');
   const { data } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => (await api.get<Summary>('/dashboard/summary')).data,
@@ -62,6 +68,22 @@ export function Dashboard() {
 
   return (
     <section className="page">
+      {/* Quick bill search */}
+      <form className="searchbox searchbox--wide" onSubmit={(e) => { e.preventDefault(); nav(`/invoices?q=${encodeURIComponent(q)}`); }}>
+        <IconSearch size={18} />
+        <input placeholder="Quick bill search — number or party…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </form>
+
+      {/* Quick dashboard counts */}
+      <div className="quick-grid">
+        <div className="quick"><span className="quick-num">{data?.billsToday ?? '—'}</span><span className="quick-lbl">Bills today</span></div>
+        <div className="quick"><span className="quick-num">{data?.billsThisWeek ?? '—'}</span><span className="quick-lbl">This week</span></div>
+        <div className="quick"><span className="quick-num">{data?.billsThisMonth ?? '—'}</span><span className="quick-lbl">This month</span></div>
+        <div className="quick"><span className="quick-num">{data ? inrK(data.outgoingValue) : '—'}</span><span className="quick-lbl">Outgoing supply</span></div>
+        <div className="quick"><span className="quick-num">{data ? inrK(data.incomingValue) : '—'}</span><span className="quick-lbl">Incoming supply</span></div>
+        <div className="quick"><span className="quick-num warn">{data?.pendingApprovals ?? '—'}</span><span className="quick-lbl">Pending approvals</span></div>
+      </div>
+
       <div className="stat-grid">
         <StatCard icon={<IconClients size={20} />} label="Customers" value={data ? String(data.customers) : '—'} delta="11.01%" up />
         <StatCard icon={<IconPurchases size={20} />} label="Orders" value={data ? String(data.orders) : '—'} delta="9.05%" up={false} />
