@@ -13,11 +13,17 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
 import { AuditModule } from './modules/audit/audit.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { OrganizationModule } from './modules/organization/organization.module';
+import { ProductsModule } from './modules/products/products.module';
+import { UsersModule } from './modules/users/users.module';
+import { PlatformModule } from './modules/platform/platform.module';
+import { StorageModule } from './common/storage/storage.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    StorageModule,
     AuthModule,
     TenantsModule,
     BillsModule,
@@ -29,6 +35,10 @@ import { ReportsModule } from './modules/reports/reports.module';
     AuditModule,
     DashboardModule,
     ReportsModule,
+    OrganizationModule,
+    ProductsModule,
+    UsersModule,
+    PlatformModule,
   ],
 })
 export class AppModule implements NestModule {

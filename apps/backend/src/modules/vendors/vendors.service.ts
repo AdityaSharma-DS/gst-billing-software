@@ -11,12 +11,10 @@ export class VendorsService {
       // Attach billing totals per party (outgoing for customers, incoming for vendors).
       return Promise.all(
         parties.map(async (p) => {
-          const bills = await tx.bill.findMany({ where: { partyId: p.id } });
+          const bills = await tx.bill.findMany({ where: { partyId: p.id, status: { not: 'CANCELLED' } }, include: { payments: true } });
           const total = bills.reduce((s, b) => s + Number(b.grandTotal), 0);
-          const paid = bills
-            .filter((b) => b.status === 'FINALIZED')
-            .reduce((s, b) => s + Number(b.grandTotal), 0);
-          return { ...p, total, paid, outstanding: total - paid };
+          const paid = bills.reduce((s, b) => s + b.payments.reduce((ps, pay) => ps + Number(pay.amount), 0), 0);
+          return { ...p, total, paid, outstanding: Math.max(0, total - paid) };
         }),
       );
     });

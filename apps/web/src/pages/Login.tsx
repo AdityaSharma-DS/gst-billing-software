@@ -17,6 +17,8 @@ export function Login() {
       const { data } = await api.post('/auth/login', { tenantSlug, email, password });
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('tenantId', data.user.tenantId ?? '');
+      localStorage.setItem('userRole', data.user.role ?? '');
+      localStorage.setItem('userName', data.user.fullName ?? '');
       navigate('/dashboard');
     } catch {
       setError('Invalid credentials');

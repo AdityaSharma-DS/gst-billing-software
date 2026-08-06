@@ -3,14 +3,31 @@ import { isAuthed } from './lib/api';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Clients } from './pages/Clients';
+import { Vendors } from './pages/Vendors';
+import { Inventory } from './pages/Inventory';
 import { Invoices } from './pages/Invoices';
+import { EwayBills } from './pages/EwayBills';
 import { Purchases } from './pages/Purchases';
 import { BillForm } from './pages/BillForm';
 import { ImportBills } from './pages/ImportBills';
 import { Reports } from './pages/Reports';
+import { Receipts } from './pages/Receipts';
 import { Returns } from './pages/Returns';
+import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
 import { Placeholder } from './pages/Placeholder';
+import { Toaster } from './components/Toaster';
+import { isAdminAuthed } from './admin/adminApi';
+import { AdminLogin } from './admin/AdminLogin';
+import { AdminLayout } from './admin/AdminLayout';
+import { AdminOverview } from './admin/AdminOverview';
+import { AdminTenants } from './admin/AdminTenants';
+import { AdminPlans } from './admin/AdminPlans';
+import { AdminGstConfig } from './admin/AdminGstConfig';
+
+function RequireAdmin({ children }: { children: JSX.Element }) {
+  return isAdminAuthed() ? children : <Navigate to="/admin/login" replace />;
+}
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   return isAuthed() ? children : <Navigate to="/login" replace />;
@@ -18,12 +35,25 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 
 export default function App() {
   return (
+    <>
+    <Toaster />
     <Routes>
       <Route path="/login" element={<Login />} />
+
+      {/* Master admin panel (platform operator) */}
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
+        <Route index element={<AdminOverview />} />
+        <Route path="tenants" element={<AdminTenants />} />
+        <Route path="plans" element={<AdminPlans />} />
+        <Route path="gst-apis" element={<AdminGstConfig />} />
+      </Route>
       <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="clients" element={<Clients />} />
+        <Route path="vendors" element={<Vendors />} />
+        <Route path="inventory" element={<Inventory />} />
 
         <Route path="invoices" element={<Invoices />} />
         <Route path="invoices/new" element={<BillForm />} />
@@ -37,11 +67,13 @@ export default function App() {
 
         <Route path="recurring" element={<Placeholder title="Recurring Clients" note="Recurring billing schedules and add-recurring modal." />} />
         <Route path="expenses" element={<Placeholder title="Expenses" note="Expense tracking with categories and add-expense modal." />} />
-        <Route path="receipts" element={<Placeholder title="Receipts" note="Payment receipts and add-receipt modal." />} />
+        <Route path="receipts" element={<Receipts />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="eway" element={<EwayBills />} />
         <Route path="returns" element={<Returns />} />
-        <Route path="settings" element={<Placeholder title="Settings" note="Theme, Company details, Terms, Notifications, App update." />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
+    </>
   );
 }

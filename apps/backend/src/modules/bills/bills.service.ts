@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { GstService } from '../gst/gst.service';
 import { AuditService } from '../audit/audit.service';
+import { ProductsService } from '../products/products.service';
 import { CreateBillDto } from './dto/create-bill.dto';
 
 export interface BillFilters {
@@ -29,10 +30,11 @@ export class BillsService {
     private readonly prisma: PrismaService,
     private readonly gst: GstService,
     private readonly audit: AuditService,
+    private readonly products: ProductsService,
   ) {}
 
   async list(tenantId: string, f: BillFilters = {}) {
-    return this.prisma.withTenant(tenantId, (tx) =>
+    const bills = await this.prisma.withTenant(tenantId, (tx) =>
       tx.bill.findMany({
         where: {
           direction: f.direction,
@@ -44,9 +46,15 @@ export class BillsService {
             : {}),
         },
         orderBy: { billDate: 'desc' },
-        include: { party: true },
+        include: { party: true, payments: true },
       }),
     );
+    // Surface paid/outstanding computed from the payments ledger.
+    return bills.map((b) => {
+      const paid = b.payments.reduce((s, p) => s + Number(p.amount), 0);
+      const { payments, ...rest } = b as any;
+      return { ...rest, paid, outstanding: Math.max(0, Number(b.grandTotal) - paid) };
+    });
   }
 
   async get(tenantId: string, id: string) {
@@ -97,6 +105,7 @@ export class BillsService {
     );
 
     await this.audit.record({ tenantId, userId, action: 'CREATE', entity: 'Bill', entityId: bill.id, after: { billNumber, grandTotal: totals.grandTotal } });
+    await this.products.learnFromLineItems(tenantId, totals.lineItems);
     return bill;
   }
 
@@ -141,6 +150,7 @@ export class BillsService {
     );
 
     await this.audit.record({ tenantId, userId, action: 'EDIT', entity: 'Bill', entityId: id, before: { grandTotal: existing.grandTotal }, after: { grandTotal: totals.grandTotal } });
+    await this.products.learnFromLineItems(tenantId, totals.lineItems);
     return bill;
   }
 

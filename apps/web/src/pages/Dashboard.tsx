@@ -74,14 +74,14 @@ export function Dashboard() {
         <input placeholder="Quick bill search — number or party…" value={q} onChange={(e) => setQ(e.target.value)} />
       </form>
 
-      {/* Quick dashboard counts */}
+      {/* Quick dashboard counts — click any tile to open the filtered list */}
       <div className="quick-grid">
-        <div className="quick"><span className="quick-num">{data?.billsToday ?? '—'}</span><span className="quick-lbl">Bills today</span></div>
-        <div className="quick"><span className="quick-num">{data?.billsThisWeek ?? '—'}</span><span className="quick-lbl">This week</span></div>
-        <div className="quick"><span className="quick-num">{data?.billsThisMonth ?? '—'}</span><span className="quick-lbl">This month</span></div>
-        <div className="quick"><span className="quick-num">{data ? inrK(data.outgoingValue) : '—'}</span><span className="quick-lbl">Outgoing supply</span></div>
-        <div className="quick"><span className="quick-num">{data ? inrK(data.incomingValue) : '—'}</span><span className="quick-lbl">Incoming supply</span></div>
-        <div className="quick"><span className="quick-num warn">{data?.pendingApprovals ?? '—'}</span><span className="quick-lbl">Pending approvals</span></div>
+        <button className="quick" onClick={() => nav('/invoices')}><span className="quick-num">{data?.billsToday ?? '—'}</span><span className="quick-lbl">Bills today</span></button>
+        <button className="quick" onClick={() => nav('/invoices')}><span className="quick-num">{data?.billsThisWeek ?? '—'}</span><span className="quick-lbl">This week</span></button>
+        <button className="quick" onClick={() => nav('/invoices')}><span className="quick-num">{data?.billsThisMonth ?? '—'}</span><span className="quick-lbl">This month</span></button>
+        <button className="quick" onClick={() => nav('/invoices')}><span className="quick-num">{data ? inrK(data.outgoingValue) : '—'}</span><span className="quick-lbl">Outgoing supply</span></button>
+        <button className="quick" onClick={() => nav('/purchases')}><span className="quick-num">{data ? inrK(data.incomingValue) : '—'}</span><span className="quick-lbl">Incoming supply</span></button>
+        <button className="quick" onClick={() => nav('/invoices?status=DRAFT')}><span className="quick-num warn">{data?.pendingApprovals ?? '—'}</span><span className="quick-lbl">Pending approvals</span></button>
       </div>
 
       <div className="stat-grid">

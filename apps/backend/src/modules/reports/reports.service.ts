@@ -100,17 +100,17 @@ export class ReportsService {
   async receivables(tenantId: string) {
     return this.prisma.withTenant(tenantId, async (tx) => {
       const bills = await tx.bill.findMany({
-        where: { direction: 'OUTGOING' },
-        include: { party: true },
+        where: { direction: 'OUTGOING', status: { not: 'CANCELLED' } },
+        include: { party: true, payments: true },
         orderBy: { billDate: 'desc' },
       });
-      // Without a payments ledger yet, treat FILED/FINALIZED as paid for the demo.
+      // Paid = actual recorded payments (payments ledger).
       return bills.map((b) => {
         const amount = Number(b.grandTotal);
-        const paid = b.status === 'FINALIZED' ? amount : 0;
+        const paid = b.payments.reduce((s, p) => s + Number(p.amount), 0);
         return {
           date: b.billDate, invoice: b.billNumber, client: b.party?.name ?? '—',
-          amount, paid, outstanding: amount - paid,
+          amount, paid, outstanding: Math.max(0, amount - paid),
         };
       });
     });

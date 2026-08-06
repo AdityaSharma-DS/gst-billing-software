@@ -9,6 +9,8 @@ import { BillsService } from './bills.service';
 import { InvoiceService } from './invoice.service';
 import { ImportService } from './import.service';
 import { MailService } from './mail.service';
+import { PaymentsService } from './payments.service';
+import { WhatsappService } from './whatsapp.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateBillDto } from './dto/create-bill.dto';
 import { UpdateStatusDto } from './dto/update-bill.dto';
@@ -21,6 +23,8 @@ export class BillsController {
     private readonly invoices: InvoiceService,
     private readonly importer: ImportService,
     private readonly mail: MailService,
+    private readonly payments: PaymentsService,
+    private readonly whatsapp: WhatsappService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -49,13 +53,23 @@ export class BillsController {
     return this.bills.get(tenantId, id);
   }
 
+  /** Same as :id/invoice.pdf but the URL ends in the invoice number, so browser
+   *  tabs and the PDF viewer's download use "INV-00004.pdf" instead of a blob hash. */
+  @Get(':id/pdf/:filename')
+  async pdfNamed(@CurrentTenant() tenantId: string, @Param('id') id: string, @Res() res: Response) {
+    return this.pdf(tenantId, id, res);
+  }
+
   @Get(':id/invoice.pdf')
   async pdf(@CurrentTenant() tenantId: string, @Param('id') id: string, @Res() res: Response) {
     const bill = await this.bills.get(tenantId, id);
     const org = await this.prisma.withTenant(tenantId, (tx) => tx.organization.findFirst());
     const buf = await this.invoices.render(bill, org);
+    // Archive a copy at <CompanyShort>/<FY>/<Month>/<dd-mm-yyyy>/<billNumber>.pdf
+    const { url } = await this.invoices.archive(tenantId, bill, org, buf);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${bill.billNumber}.pdf"`);
+    res.setHeader('X-Invoice-Archive', url);
     res.send(buf);
   }
 
@@ -98,5 +112,31 @@ export class BillsController {
   @Roles('ADMIN', 'ACCOUNTANT')
   import(@CurrentTenant() tenantId: string, @CurrentUser() user: any, @Body() body: { csv: string; direction: 'INCOMING' | 'OUTGOING' }) {
     return this.importer.importCsv(tenantId, body.csv, body.direction ?? 'OUTGOING', user?.id);
+  }
+
+  @Post(':id/whatsapp')
+  @Roles('ADMIN', 'ACCOUNTANT')
+  async sendWhatsapp(@CurrentTenant() tenantId: string, @Param('id') id: string, @Body() body: { to?: string }) {
+    const bill = await this.bills.get(tenantId, id);
+    const org = await this.prisma.withTenant(tenantId, (tx) => tx.organization.findFirst());
+    const pdf = await this.invoices.render(bill, org);
+    const { url } = await this.invoices.archive(tenantId, bill, org, pdf);
+    return this.whatsapp.send(bill, org, url, body?.to);
+  }
+
+  @Get(':id/payments')
+  listPayments(@CurrentTenant() tenantId: string, @Param('id') id: string) {
+    return this.payments.listForBill(tenantId, id);
+  }
+
+  @Post(':id/payments')
+  @Roles('ADMIN', 'ACCOUNTANT')
+  recordPayment(
+    @CurrentTenant() tenantId: string,
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { amount: number; mode?: string; reference?: string; date?: string; notes?: string },
+  ) {
+    return this.payments.record(tenantId, id, body, user?.id);
   }
 }

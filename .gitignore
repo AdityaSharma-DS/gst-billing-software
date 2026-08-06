@@ -28,6 +28,14 @@ design/*.fig
 # Prisma
 apps/backend/prisma/*.db
 
+# Runtime per-tenant document storage (logos, invoice PDFs, return JSONs)
+apps/backend/storage/
+
+# Local working notes / test assets (not project source)
+/changes
+/health_for_all_logo.png
+/*.local.png
+
 # Logs
 *.log
 npm-debug.log*

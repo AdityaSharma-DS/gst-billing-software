@@ -14,7 +14,13 @@ export interface JwtPayload {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(config: ConfigService) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      // Bearer header normally; `?token=` for browser-opened links (PDF viewer tabs)
+      // where headers can't be set. Note: URLs can end up in logs/history — prefer
+      // short-lived scoped tokens for production links.
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        ExtractJwt.fromUrlQueryParameter('token'),
+      ]),
       ignoreExpiration: false,
       secretOrKey: config.get<string>('JWT_SECRET') || 'dev-secret',
     });

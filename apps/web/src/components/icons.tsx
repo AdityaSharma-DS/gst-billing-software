@@ -14,5 +14,6 @@ export const IconReturns = ({ size }: P) => (<svg {...s(size)}><path d="M4 5.5A2
 export const IconSettings = ({ size }: P) => (<svg {...s(size)}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" /></svg>);
 export const IconSearch = ({ size }: P) => (<svg {...s(size)}><circle cx="11" cy="11" r="7" /><path d="m21 21-4-4" /></svg>);
 export const IconLock = ({ size }: P) => (<svg {...s(size)}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>);
+export const IconBox = ({ size }: P) => (<svg {...s(size)}><path d="M12 3 4 7v10l8 4 8-4V7z" /><path d="M4 7l8 4 8-4M12 11v10" /></svg>);
 export const IconUnlock = ({ size }: P) => (<svg {...s(size)}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 7.5-2" /></svg>);
 export const IconBell = ({ size }: P) => (<svg {...s(size)}><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>);

@@ -18,6 +18,19 @@ export class MailService {
     });
   }
 
+  /** Verify the SMTP connection/credentials (used by Settings → "Test email connection"). */
+  async verify(): Promise<{ ok: boolean; reason?: string; host?: string }> {
+    const t = this.transport();
+    const host = this.config.get<string>('SMTP_HOST');
+    if (!t) return { ok: false, reason: 'SMTP not configured (set SMTP_HOST / SMTP_USER / SMTP_PASS in .env)' };
+    try {
+      await t.verify();
+      return { ok: true, host };
+    } catch (e: any) {
+      return { ok: false, reason: e?.message ?? 'SMTP verification failed', host };
+    }
+  }
+
   async sendInvoice(to: string, filename: string, pdf: Buffer, subject: string): Promise<{ sent: boolean; reason?: string }> {
     const t = this.transport();
     if (!t) {

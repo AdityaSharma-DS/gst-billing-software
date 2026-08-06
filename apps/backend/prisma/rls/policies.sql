@@ -36,6 +36,8 @@ DECLARE
     'irns',
     'eway_bills',
     'payments',
+    'products',
+    'bill_payments',
     'audit_logs'
   ];
 BEGIN

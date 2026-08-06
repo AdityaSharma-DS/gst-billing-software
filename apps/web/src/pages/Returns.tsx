@@ -1,43 +1,73 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { toast } from '../components/Toaster';
 
 type MainTab = 'GSTR-1' | 'GSTR-3B' | 'GSTR-3B Reconciliation' | 'TDS/TCS Report';
-type SubTab = 'B2B' | 'B2CL' | 'B2CS' | 'CDNR';
+type SubTab = 'B2B' | 'B2CL' | 'B2CS' | 'CDNR' | 'HSN';
 
-const inr = (n: number) => '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+interface GstReturn { id: string; returnType: string; period: string; version: number; status: string; jsonUrl?: string; summary?: any; validationErrors?: any; filedAt?: string; arn?: string; }
+interface ComplianceRow { returnType: string; period: string; dueDate: string; status: string; overdueDays: number; lateFee: number; arn: string | null; }
 
-const b2b = [
-  { gstin: '27ABCDE1234F1Z5', invoice: 'INV-00001', date: '06-12-26', value: 118000, rate: 18, taxable: 100000, igst: 0, cgst: 9000, sgst: 9000 },
-  { gstin: '29LMNOP4321K1Z9', invoice: 'INV-00002', date: '08-12-26', value: 66080, rate: 18, taxable: 56000, igst: 10080, cgst: 0, sgst: 0 },
-];
+const inr = (n: number) => '₹' + Number(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+const d = (s?: string | null) => (s ? new Date(s).toLocaleDateString('en-IN') : '—');
+
+// Build the current + last two periods as MM-YYYY.
+function recentPeriods(): string[] {
+  const now = new Date(); const out: string[] = [];
+  for (let i = 0; i < 4; i++) { const dt = new Date(now.getFullYear(), now.getMonth() - i, 1); out.push(`${String(dt.getMonth() + 1).padStart(2, '0')}-${dt.getFullYear()}`); }
+  return out;
+}
 
 export function Returns() {
+  const qc = useQueryClient();
   const [tab, setTab] = useState<MainTab>('GSTR-1');
   const [sub, setSub] = useState<SubTab>('B2B');
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState('');
+  const [period, setPeriod] = useState('06-2026');
 
-  async function exportJson(returnType: string) {
-    setBusy(true); setMsg('');
-    try {
-      await api.post('/returns/generate', { returnType, period: '06-2026' });
-      setMsg(`${returnType} JSON generated.`);
-    } catch {
-      setMsg('Sign in to generate (backend).');
-    } finally { setBusy(false); }
+  const { data: returns = [] } = useQuery({ queryKey: ['returns'], queryFn: async () => (await api.get<GstReturn[]>('/returns')).data });
+  const { data: compliance = [] } = useQuery({ queryKey: ['compliance'], queryFn: async () => (await api.get<ComplianceRow[]>('/returns/compliance')).data });
+
+  // Latest generated return for the current tab + period.
+  const rtype = tab === 'GSTR-3B' ? 'GSTR3B' : 'GSTR1';
+  const current = useMemo(() => returns.filter((r) => r.returnType === rtype && r.period === period).sort((a, b) => b.version - a.version)[0], [returns, rtype, period]);
+
+  const generate = useMutation({
+    mutationFn: async () => (await api.post('/returns/generate', { returnType: rtype, period })).data,
+    onSuccess: (r: GstReturn) => { qc.invalidateQueries({ queryKey: ['returns'] }); toast(r.status === 'ERROR' ? `Generated with ${r.validationErrors?.length} validation issue(s)` : `${rtype} generated (v${r.version})`, r.status === 'ERROR' ? 'info' : 'success'); },
+    onError: (e: any) => toast(e?.response?.data?.message ?? 'Generation failed', 'error'),
+  });
+  const markFiled = useMutation({
+    mutationFn: async (id: string) => (await api.post(`/returns/${id}/file`, {})).data,
+    onSuccess: (r: GstReturn) => { qc.invalidateQueries({ queryKey: ['returns'] }); qc.invalidateQueries({ queryKey: ['compliance'] }); toast(`Marked filed — ${r.arn}`); },
+    onError: (e: any) => toast(e?.response?.data?.message ?? 'Failed', 'error'),
+  });
+
+  async function downloadJson(id: string) {
+    const res = await api.get(`/returns/${id}/json`, { responseType: 'blob' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(res.data);
+    a.download = `${rtype}_${period}.json`; a.click(); URL.revokeObjectURL(a.href);
   }
+
+  const s = current?.summary ?? {};
+  const netPayable = tab === 'GSTR-3B' && s.netPayable ? (s.netPayable.iamt + s.netPayable.camt + s.netPayable.samt) : (s.igst + s.cgst + s.sgst) || 0;
 
   return (
     <section className="page">
       <div className="page-head">
         <h2>GST Returns</h2>
-        <div className="page-actions"><button className="btn-ghost">Monthly</button><button className="btn-ghost">FY 2026-27</button></div>
+        <div className="page-actions">
+          <select value={period} onChange={(e) => setPeriod(e.target.value)}>
+            {recentPeriods().map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
       </div>
 
       <div className="stat-grid stat-grid--4">
-        {[['Total Tax Liability', '₹3,782'], ['ITC Available', '₹3,782'], ['Net Payable', '₹3,782'], ['Filed', '₹3,782']].map(([l, v]) => (
-          <div className="stat-card" key={l}><div className="stat-label">{l}</div><div className="stat-value">{v}</div></div>
-        ))}
+        <div className="stat-card"><div className="stat-label">Taxable Value</div><div className="stat-value">{s.taxable != null || s.outward ? inr(s.taxable ?? s.outward?.txval) : '—'}</div></div>
+        <div className="stat-card"><div className="stat-label">Total Tax</div><div className="stat-value">{current ? inr((s.igst ?? s.outward?.iamt ?? 0) + (s.cgst ?? s.outward?.camt ?? 0) + (s.sgst ?? s.outward?.samt ?? 0)) : '—'}</div></div>
+        <div className="stat-card"><div className="stat-label">Net Payable</div><div className="stat-value">{current ? inr(netPayable) : '—'}</div></div>
+        <div className="stat-card"><div className="stat-label">Status</div><div className="stat-value" style={{ fontSize: 18 }}>{current ? current.status : 'Not generated'}</div></div>
       </div>
 
       <div className="card">
@@ -48,50 +78,132 @@ export function Returns() {
             ))}
           </div>
           <div className="tabs-actions">
-            <button className="btn-ghost" disabled={busy} onClick={() => exportJson(tab === 'GSTR-3B' ? 'GSTR3B' : 'GSTR1')}>Generate JSON</button>
-            <button className="btn-primary" disabled={busy} onClick={() => exportJson(tab === 'GSTR-3B' ? 'GSTR3B' : 'GSTR1')}>JSON Export</button>
+            <button className="btn-ghost" disabled={generate.isPending} onClick={() => generate.mutate()}>{generate.isPending ? 'Generating…' : 'Generate'}</button>
+            {current && <button className="btn-ghost" onClick={() => downloadJson(current.id)}>Download JSON</button>}
+            {current && current.status !== 'FILED' && <button className="btn-primary" onClick={() => markFiled.mutate(current.id)}>Mark Filed</button>}
+            {current?.status === 'FILED' && <span className="badge badge--finalized">Filed · {current.arn}</span>}
           </div>
         </div>
 
-        {msg && <p className="muted small" style={{ marginTop: 8 }}>{msg}</p>}
+        {current?.status === 'ERROR' && (
+          <div className="warn-item" style={{ marginBottom: 12 }}>
+            {current.validationErrors?.length} validation issue(s): {current.validationErrors?.slice(0, 3).map((e: any) => e.message).join('; ')}
+          </div>
+        )}
+        {!current && <p className="muted small">No {rtype} generated for {period}. Click <b>Generate</b>.</p>}
 
-        {tab === 'GSTR-1' && (
-          <>
-            <div className="subtabs">
-              {(['B2B', 'B2CL', 'B2CS', 'CDNR'] as SubTab[]).map((s) => (
-                <button key={s} className={`subtab ${sub === s ? 'subtab--active' : ''}`} onClick={() => setSub(s)}>{s}</button>
-              ))}
-            </div>
-            <table className="data-table compact">
-              <thead><tr><th>GSTIN</th><th>Invoice</th><th>Date</th><th className="num">Value</th><th className="num">Rate</th><th className="num">Taxable</th><th className="num">IGST</th><th className="num">CGST</th><th className="num">SGST</th></tr></thead>
-              <tbody>
-                {b2b.map((r) => (
-                  <tr key={r.invoice}>
-                    <td className="mono">{r.gstin}</td><td>{r.invoice}</td><td className="muted">{r.date}</td>
-                    <td className="num">{inr(r.value)}</td><td className="num">{r.rate}%</td><td className="num">{inr(r.taxable)}</td>
-                    <td className="num">{inr(r.igst)}</td><td className="num">{inr(r.cgst)}</td><td className="num">{inr(r.sgst)}</td>
-                  </tr>
-                ))}
-                <tr className="row-total"><td colSpan={5}>Total</td><td className="num">{inr(156000)}</td><td className="num">{inr(10080)}</td><td className="num">{inr(9000)}</td><td className="num">{inr(9000)}</td></tr>
-              </tbody>
-            </table>
-          </>
+        {tab === 'GSTR-1' && current && (
+          <Gstr1Sections id={current.id} sub={sub} setSub={setSub} />
         )}
 
-        {tab === 'GSTR-3B' && (
+        {tab === 'GSTR-3B' && current && (
           <table className="data-table compact">
             <thead><tr><th>Nature of Supplies</th><th className="num">Taxable</th><th className="num">IGST</th><th className="num">CGST</th><th className="num">SGST</th></tr></thead>
             <tbody>
-              <tr><td>(a) Outward taxable supplies</td><td className="num">{inr(156000)}</td><td className="num">{inr(10080)}</td><td className="num">{inr(9000)}</td><td className="num">{inr(9000)}</td></tr>
-              <tr><td>(d) Inward supplies (reverse charge)</td><td className="num">{inr(0)}</td><td className="num">{inr(0)}</td><td className="num">{inr(0)}</td><td className="num">{inr(0)}</td></tr>
-              <tr className="row-total"><td>Net Tax Payable</td><td className="num">—</td><td className="num">{inr(10080)}</td><td className="num">{inr(9000)}</td><td className="num">{inr(9000)}</td></tr>
+              <tr><td>3.1(a) Outward taxable supplies</td><td className="num">{inr(s.outward?.txval)}</td><td className="num">{inr(s.outward?.iamt)}</td><td className="num">{inr(s.outward?.camt)}</td><td className="num">{inr(s.outward?.samt)}</td></tr>
+              <tr><td>4. ITC available (purchases)</td><td className="num">—</td><td className="num">{inr(s.itc?.iamt)}</td><td className="num">{inr(s.itc?.camt)}</td><td className="num">{inr(s.itc?.samt)}</td></tr>
+              <tr className="row-total"><td>Net Tax Payable</td><td className="num">—</td><td className="num">{inr(s.netPayable?.iamt)}</td><td className="num">{inr(s.netPayable?.camt)}</td><td className="num">{inr(s.netPayable?.samt)}</td></tr>
             </tbody>
           </table>
         )}
 
-        {tab === 'GSTR-3B Reconciliation' && <div className="empty-state"><p className="muted">GSTR-2B vs purchase reconciliation — matched / mismatched / missing.</p></div>}
-        {tab === 'TDS/TCS Report' && <div className="empty-state"><p className="muted">TDS (GSTR-7) and TCS (GSTR-8) deduction summary.</p></div>}
+        {tab === 'GSTR-3B Reconciliation' && <div className="empty-state"><p className="muted">GSTR-2B vs purchase reconciliation — needs GSTN 2B download (credential-gated).</p></div>}
+        {tab === 'TDS/TCS Report' && <div className="empty-state"><p className="muted">TDS (GSTR-7) and TCS (GSTR-8) — coming next.</p></div>}
+      </div>
+
+      {/* Compliance / filing status */}
+      <div className="card">
+        <h3 className="card-title">Filing Status &amp; Due Dates</h3>
+        <table className="data-table">
+          <thead><tr><th>Return</th><th>Period</th><th>Due Date</th><th>Status</th><th className="num">Overdue</th><th className="num">Late Fee (est.)</th><th>ARN</th></tr></thead>
+          <tbody>
+            {compliance.map((r, i) => (
+              <tr key={i}>
+                <td className="cell-strong">{r.returnType}</td>
+                <td>{r.period}</td>
+                <td className="muted">{d(r.dueDate)}</td>
+                <td><span className={`badge badge--${r.status === 'FILED' ? 'finalized' : r.status === 'OVERDUE' ? 'overdue' : 'pending'}`}>{r.status}</span></td>
+                <td className="num">{r.overdueDays ? `${r.overdueDays}d` : '—'}</td>
+                <td className="num">{r.lateFee ? <span className="neg">{inr(r.lateFee)}</span> : '—'}</td>
+                <td className="muted mono">{r.arn ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
+  );
+}
+
+/** Renders GSTR-1 sections (B2B/B2CL/B2CS/CDNR/HSN) from the generated JSON. */
+function Gstr1Sections({ id, sub, setSub }: { id: string; sub: SubTab; setSub: (s: SubTab) => void }) {
+  const { data } = useQuery({ queryKey: ['return-json', id], queryFn: async () => JSON.parse((await api.get(`/returns/${id}/json`, { responseType: 'text' })).data) });
+  const j = data ?? {};
+
+  return (
+    <>
+      <div className="subtabs">
+        {(['B2B', 'B2CL', 'B2CS', 'CDNR', 'HSN'] as SubTab[]).map((sName) => (
+          <button key={sName} className={`subtab ${sub === sName ? 'subtab--active' : ''}`} onClick={() => setSub(sName)}>{sName}</button>
+        ))}
+      </div>
+
+      {sub === 'B2B' && (
+        <table className="data-table compact">
+          <thead><tr><th>GSTIN</th><th>Invoice</th><th>Date</th><th className="num">Value</th><th>POS</th><th className="num">Rate</th><th className="num">Taxable</th><th className="num">IGST</th><th className="num">CGST</th><th className="num">SGST</th></tr></thead>
+          <tbody>
+            {(j.b2b ?? []).flatMap((p: any) => p.inv.map((inv: any) => ({ ctin: p.ctin, ...inv }))).map((inv: any, i: number) => {
+              const it = inv.itms?.[0]?.itm_det ?? {};
+              return <tr key={i}>
+                <td className="mono">{inv.ctin}</td><td>{inv.inum}</td><td className="muted">{inv.idt}</td>
+                <td className="num">{inr(inv.val)}</td><td>{inv.pos}</td><td className="num">{it.rt}%</td>
+                <td className="num">{inr(it.txval)}</td><td className="num">{inr(it.iamt)}</td><td className="num">{inr(it.camt)}</td><td className="num">{inr(it.samt)}</td>
+              </tr>;
+            })}
+            {(!j.b2b || j.b2b.length === 0) && <tr><td colSpan={10} className="muted">No B2B invoices.</td></tr>}
+          </tbody>
+        </table>
+      )}
+
+      {sub === 'B2CS' && (
+        <table className="data-table compact">
+          <thead><tr><th>Type</th><th>POS</th><th className="num">Rate</th><th className="num">Taxable</th><th className="num">IGST</th><th className="num">CGST</th><th className="num">SGST</th></tr></thead>
+          <tbody>
+            {(j.b2cs ?? []).map((r: any, i: number) => <tr key={i}><td>{r.sply_ty}</td><td>{r.pos}</td><td className="num">{r.rt}%</td><td className="num">{inr(r.txval)}</td><td className="num">{inr(r.iamt)}</td><td className="num">{inr(r.camt)}</td><td className="num">{inr(r.samt)}</td></tr>)}
+            {(!j.b2cs || j.b2cs.length === 0) && <tr><td colSpan={7} className="muted">No B2C (small) supplies.</td></tr>}
+          </tbody>
+        </table>
+      )}
+
+      {sub === 'B2CL' && (
+        <table className="data-table compact">
+          <thead><tr><th>POS</th><th>Invoice</th><th>Date</th><th className="num">Value</th></tr></thead>
+          <tbody>
+            {(j.b2cl ?? []).flatMap((p: any) => p.inv.map((inv: any) => ({ pos: p.pos, ...inv }))).map((inv: any, i: number) => <tr key={i}><td>{inv.pos}</td><td>{inv.inum}</td><td className="muted">{inv.idt}</td><td className="num">{inr(inv.val)}</td></tr>)}
+            {(!j.b2cl || j.b2cl.length === 0) && <tr><td colSpan={4} className="muted">No B2C (large, inter-state &gt; ₹2.5L) invoices.</td></tr>}
+          </tbody>
+        </table>
+      )}
+
+      {sub === 'CDNR' && (
+        <table className="data-table compact">
+          <thead><tr><th>GSTIN</th><th>Note No.</th><th>Date</th><th className="num">Value</th></tr></thead>
+          <tbody>
+            {(j.cdnr ?? []).flatMap((p: any) => p.nt.map((n: any) => ({ ctin: p.ctin, ...n }))).map((n: any, i: number) => <tr key={i}><td className="mono">{n.ctin}</td><td>{n.nt_num}</td><td className="muted">{n.nt_dt}</td><td className="num">{inr(n.val)}</td></tr>)}
+            {(!j.cdnr || j.cdnr.length === 0) && <tr><td colSpan={4} className="muted">No credit/debit notes.</td></tr>}
+          </tbody>
+        </table>
+      )}
+
+      {sub === 'HSN' && (
+        <table className="data-table compact">
+          <thead><tr><th>HSN/SAC</th><th>UQC</th><th className="num">Qty</th><th className="num">Taxable</th><th className="num">IGST</th><th className="num">CGST</th><th className="num">SGST</th></tr></thead>
+          <tbody>
+            {(j.hsn?.data ?? []).map((h: any, i: number) => <tr key={i}><td className="mono">{h.hsn_sc}</td><td>{h.uqc}</td><td className="num">{h.qty}</td><td className="num">{inr(h.txval)}</td><td className="num">{inr(h.iamt)}</td><td className="num">{inr(h.camt)}</td><td className="num">{inr(h.samt)}</td></tr>)}
+            {(!j.hsn?.data || j.hsn.data.length === 0) && <tr><td colSpan={7} className="muted">No HSN data.</td></tr>}
+          </tbody>
+        </table>
+      )}
+    </>
   );
 }

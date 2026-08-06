@@ -4,18 +4,21 @@ import { Logo } from './Logo';
 import {
   IconDashboard, IconClients, IconPlus, IconRecurring, IconExpenses,
   IconPurchases, IconReceipts, IconReports, IconReturns, IconSettings,
-  IconSearch, IconBell,
+  IconSearch, IconBell, IconBox,
 } from './icons';
 
 const nav = [
   { to: '/dashboard', label: 'Dashboard', Icon: IconDashboard },
   { to: '/clients', label: 'Clients', Icon: IconClients },
+  { to: '/vendors', label: 'Vendors', Icon: IconClients },
+  { to: '/inventory', label: 'Inventory', Icon: IconBox },
   { to: '/invoices', label: 'New Invoices', Icon: IconPlus },
   { to: '/recurring', label: 'Recurring Clients', Icon: IconRecurring },
   { to: '/expenses', label: 'Expenses', Icon: IconExpenses },
   { to: '/purchases', label: 'Purchases', Icon: IconPurchases },
   { to: '/receipts', label: 'Receipts', Icon: IconReceipts },
   { to: '/reports', label: 'Reports', Icon: IconReports },
+  { to: '/eway', label: 'E-Way Bills', Icon: IconReturns },
   { to: '/returns', label: 'GST Returns', Icon: IconReturns },
 ];
 

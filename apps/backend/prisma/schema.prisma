@@ -47,10 +47,21 @@ model Organization {
   tenantId      String
   legalName     String
   tradeName     String?
+  invoiceShortCode String? // 3-letter code for invoice archive path, e.g. "DON"
   gstin         String?
   pan           String?
+  cin           String?
+  msme          String?  // Udyam / MSME registration number
   taxRegime     TaxRegime @default(REGULAR)
   financialYear String   // e.g. "2026-27"
+  // Bank / payment details (shown on invoices)
+  bankAccountName   String?
+  bankName          String?
+  bankAccountNumber String?
+  bankBranch        String?
+  bankIfsc          String?
+  upiId             String?
+  defaultTerms      String?  // default Terms & Conditions for invoices
   // Branding
   logoUrl       String?
   addressLine1  String?
@@ -182,6 +193,7 @@ model Bill {
   tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   party     Party?         @relation(fields: [partyId], references: [id])
   lineItems BillLineItem[]
+  payments  BillPayment[]
   invoice   Invoice?
   irn       Irn?
   eWayBill  EWayBill?
@@ -260,6 +272,49 @@ model Invoice {
 
   @@unique([tenantId, invoiceNumber])
   @@map("invoices")
+}
+
+// ───────────────────────── Products & Payments ─────────────────────────────
+
+/// Item/product master — powers autocomplete on bill entry. Auto-learned from
+/// saved bills and editable later via a Products screen.
+model Product {
+  id         String   @id @default(uuid())
+  tenantId   String
+  name       String
+  barcode    String?
+  hsnSacCode String?
+  unit       String?
+  rate       Decimal  @default(0) @db.Decimal(14, 2)
+  gstRate    Decimal  @default(18) @db.Decimal(5, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, barcode])
+  @@map("products")
+}
+
+/// Payments recorded against a bill (supports partial payments).
+model BillPayment {
+  id        String   @id @default(uuid())
+  tenantId  String
+  billId    String
+  date      DateTime @default(now())
+  amount    Decimal  @db.Decimal(14, 2)
+  mode      String?  // Cash | UPI | Bank Transfer | Card | Cheque
+  reference String?  // UTR / txn id
+  chequeNo    String?
+  bankDetails String? // bank / branch details for cheque or transfer
+  notes     String?
+  createdAt DateTime @default(now())
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, billId])
+  @@index([tenantId, date])
+  @@map("bill_payments")
 }
 
 // ───────────────────────── GST Tax Rates ───────────────────────────────────
@@ -440,6 +495,30 @@ enum PaymentStatus {
   SUCCEEDED
   FAILED
   REFUNDED
+}
+
+// ───────────────────────── Platform (master admin) ─────────────────────────
+
+/// SaaS operator accounts — NOT tenant users. Manage licenses, plans, GST APIs.
+model PlatformAdmin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  @@map("platform_admins")
+}
+
+/// Platform-wide key-value settings (e.g. GST API credentials, billing config).
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
 }
 
 // ───────────────────────── Audit Trail (append-only) ───────────────────────

@@ -18,6 +18,8 @@ api.interceptors.response.use(
     if (error?.response?.status === 401 && !location.pathname.startsWith('/login')) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('tenantId');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
       location.href = '/login';
     }
     return Promise.reject(error);
@@ -27,7 +29,11 @@ api.interceptors.response.use(
 export function logout() {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('tenantId');
+  localStorage.removeItem('userRole');
+  localStorage.removeItem('userName');
   location.href = '/login';
 }
 
 export const isAuthed = () => !!localStorage.getItem('accessToken');
+export const currentRole = () => localStorage.getItem('userRole') ?? '';
+export const currentUserName = () => localStorage.getItem('userName') ?? '';

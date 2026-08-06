@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { join } from 'path';
+import * as express from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -12,6 +14,9 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, transform: true }),
   );
   app.enableCors();
+
+  // Serve locally-stored tenant documents (e.g. logos) read-only.
+  app.use('/uploads', express.static(join(process.cwd(), 'storage')));
 
   const port = config.get<number>('PORT', 4000);
   await app.listen(port);

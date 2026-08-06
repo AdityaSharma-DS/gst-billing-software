@@ -174,6 +174,12 @@ Every tenant-scoped table carries a `tenantId` and is protected by **PostgreSQL 
 
 ## Running the apps
 
+**One command (recommended):**
+- Windows: double-click **`start.bat`** (or `./start.ps1`). First time: `start.bat setup` to migrate + seed.
+- Git Bash / macOS / Linux: **`./start.sh`** (first time: `./start.sh setup`).
+
+These ensure PostgreSQL is running, install deps if needed, and launch backend + web.
+
 | App | Command | URL |
 |-----|---------|-----|
 | Backend API | `npm run dev:backend` | http://localhost:4000/api |
