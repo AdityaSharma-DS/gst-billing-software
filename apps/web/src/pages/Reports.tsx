@@ -8,6 +8,7 @@ interface SummaryRow { period: string; count: number; taxable: number; tax: numb
 interface PartyRow { party: string; gstin: string | null; bills: number; taxable: number; total: number; }
 interface Tax { cgst: number; sgst: number; igst: number; cess: number; }
 interface TaxSummary { output: Tax; input: Tax; net: Tax; }
+interface VendorRow { vendor: string; gstin: string | null; bills: number; ytdPurchases: number; last30: number; avgInvoice: number; outstanding: number; itc: number; score: number; }
 
 const inr = (n: number) => '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const d = (s: string) => new Date(s).toLocaleDateString('en-IN');
@@ -21,6 +22,7 @@ export function Reports() {
   const { data: summary = [] } = useQuery({ queryKey: ['rsummary', period], queryFn: async () => (await api.get<SummaryRow[]>(`/reports/summary?period=${period}`)).data });
   const { data: byParty = [] } = useQuery({ queryKey: ['byparty', partyType], queryFn: async () => (await api.get<PartyRow[]>(`/reports/by-party?type=${partyType}`)).data });
   const { data: tax } = useQuery({ queryKey: ['taxsummary'], queryFn: async () => (await api.get<TaxSummary>('/reports/tax-summary')).data });
+  const { data: vendorRows = [] } = useQuery({ queryKey: ['vendor-analytics'], queryFn: async () => (await api.get<VendorRow[]>('/reports/vendor-analytics')).data });
 
   const rows = pnl ? [
     { label: 'Total Revenue', value: pnl.totalRevenue },
@@ -85,6 +87,29 @@ export function Reports() {
             {byParty.length === 0 && <tr><td colSpan={5} className="muted">No data.</td></tr>}
             {byParty.map((r) => (
               <tr key={r.party}><td>{r.party}</td><td className="muted mono">{r.gstin ?? '—'}</td><td className="num">{r.bills}</td><td className="num">{inr(r.taxable)}</td><td className="num">{inr(r.total)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Vendor analytics */}
+      <div className="card">
+        <h3 className="card-title">Vendor Analytics</h3>
+        <table className="data-table">
+          <thead><tr><th>Vendor</th><th className="num">Bills</th><th className="num">YTD Purchases</th><th className="num">Last 30d</th><th className="num">Avg Invoice</th><th className="num">Outstanding</th><th className="num">ITC</th><th className="num">Score</th></tr></thead>
+          <tbody>
+            {vendorRows.length === 0 && <tr><td colSpan={8} className="muted">No vendors yet.</td></tr>}
+            {vendorRows.map((v) => (
+              <tr key={v.vendor}>
+                <td className="cell-strong">{v.vendor}</td>
+                <td className="num">{v.bills}</td>
+                <td className="num">{inr(v.ytdPurchases)}</td>
+                <td className="num">{inr(v.last30)}</td>
+                <td className="num">{inr(v.avgInvoice)}</td>
+                <td className="num">{v.outstanding ? <span className="neg">{inr(v.outstanding)}</span> : '—'}</td>
+                <td className="num pos">{inr(v.itc)}</td>
+                <td className="num"><span className={`badge badge--${v.score >= 70 ? 'finalized' : v.score >= 40 ? 'pending' : 'overdue'}`}>{v.score}</span></td>
+              </tr>
             ))}
           </tbody>
         </table>

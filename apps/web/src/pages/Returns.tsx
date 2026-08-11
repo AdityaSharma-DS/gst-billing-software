@@ -3,8 +3,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { toast } from '../components/Toaster';
 
-type MainTab = 'GSTR-1' | 'GSTR-3B' | 'GSTR-3B Reconciliation' | 'TDS/TCS Report';
+type MainTab = 'GSTR-1' | 'GSTR-3B' | 'GSTR-4' | 'GSTR-9' | 'GSTR-3B Reconciliation' | 'TDS/TCS Report';
 type SubTab = 'B2B' | 'B2CL' | 'B2CS' | 'CDNR' | 'HSN';
+
+// Composition (GSTR-4) uses quarters. Q1=Apr-Jun … Q4=Jan-Mar.
+function recentQuarters(): string[] { const y = new Date().getFullYear(); return [`Q1-${y}`, `Q2-${y}`, `Q3-${y}`, `Q4-${y}`]; }
+
+// Annual return (GSTR-9) uses financial years, e.g. "2026-27". FY starts in April.
+function recentFYs(): string[] {
+  const now = new Date();
+  const startYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  return [0, 1, 2].map((i) => { const sy = startYear - i; return `${sy}-${String((sy + 1) % 100).padStart(2, '0')}`; });
+}
 
 interface GstReturn { id: string; returnType: string; period: string; version: number; status: string; jsonUrl?: string; summary?: any; validationErrors?: any; filedAt?: string; arn?: string; }
 interface ComplianceRow { returnType: string; period: string; dueDate: string; status: string; overdueDays: number; lateFee: number; arn: string | null; }
@@ -28,8 +38,10 @@ export function Returns() {
   const { data: returns = [] } = useQuery({ queryKey: ['returns'], queryFn: async () => (await api.get<GstReturn[]>('/returns')).data });
   const { data: compliance = [] } = useQuery({ queryKey: ['compliance'], queryFn: async () => (await api.get<ComplianceRow[]>('/returns/compliance')).data });
 
+  const isGstr4 = tab === 'GSTR-4';
+  const isGstr9 = tab === 'GSTR-9';
   // Latest generated return for the current tab + period.
-  const rtype = tab === 'GSTR-3B' ? 'GSTR3B' : 'GSTR1';
+  const rtype = tab === 'GSTR-3B' ? 'GSTR3B' : tab === 'GSTR-4' ? 'GSTR4' : tab === 'GSTR-9' ? 'GSTR9' : 'GSTR1';
   const current = useMemo(() => returns.filter((r) => r.returnType === rtype && r.period === period).sort((a, b) => b.version - a.version)[0], [returns, rtype, period]);
 
   const generate = useMutation({
@@ -50,7 +62,12 @@ export function Returns() {
   }
 
   const s = current?.summary ?? {};
-  const netPayable = tab === 'GSTR-3B' && s.netPayable ? (s.netPayable.iamt + s.netPayable.camt + s.netPayable.samt) : (s.igst + s.cgst + s.sgst) || 0;
+  const netPayable = isGstr4 ? (s.taxPayable ?? 0)
+    : isGstr9 ? (s.netPayable ?? 0)
+    : tab === 'GSTR-3B' && s.netPayable ? (s.netPayable.iamt + s.netPayable.camt + s.netPayable.samt)
+    : (s.igst + s.cgst + s.sgst) || 0;
+  const taxableVal = s.taxable ?? s.outward?.txval ?? s.outwardTaxable ?? s.turnover;
+  const totalTax = (s.igst ?? s.outward?.iamt ?? 0) + (s.cgst ?? s.outward?.camt ?? 0) + (s.sgst ?? s.outward?.samt ?? 0) || s.outwardTax || s.taxPayable || 0;
 
   return (
     <section className="page">
@@ -58,14 +75,14 @@ export function Returns() {
         <h2>GST Returns</h2>
         <div className="page-actions">
           <select value={period} onChange={(e) => setPeriod(e.target.value)}>
-            {recentPeriods().map((p) => <option key={p} value={p}>{p}</option>)}
+            {(isGstr4 ? recentQuarters() : isGstr9 ? recentFYs() : recentPeriods()).map((p) => <option key={p} value={p}>{isGstr9 ? `FY ${p}` : p}</option>)}
           </select>
         </div>
       </div>
 
       <div className="stat-grid stat-grid--4">
-        <div className="stat-card"><div className="stat-label">Taxable Value</div><div className="stat-value">{s.taxable != null || s.outward ? inr(s.taxable ?? s.outward?.txval) : '—'}</div></div>
-        <div className="stat-card"><div className="stat-label">Total Tax</div><div className="stat-value">{current ? inr((s.igst ?? s.outward?.iamt ?? 0) + (s.cgst ?? s.outward?.camt ?? 0) + (s.sgst ?? s.outward?.samt ?? 0)) : '—'}</div></div>
+        <div className="stat-card"><div className="stat-label">Taxable Value</div><div className="stat-value">{current && taxableVal != null ? inr(taxableVal) : '—'}</div></div>
+        <div className="stat-card"><div className="stat-label">Total Tax</div><div className="stat-value">{current ? inr(totalTax) : '—'}</div></div>
         <div className="stat-card"><div className="stat-label">Net Payable</div><div className="stat-value">{current ? inr(netPayable) : '—'}</div></div>
         <div className="stat-card"><div className="stat-label">Status</div><div className="stat-value" style={{ fontSize: 18 }}>{current ? current.status : 'Not generated'}</div></div>
       </div>
@@ -73,8 +90,14 @@ export function Returns() {
       <div className="card">
         <div className="tabs tabs--between">
           <div className="tabs-group">
-            {(['GSTR-1', 'GSTR-3B', 'GSTR-3B Reconciliation', 'TDS/TCS Report'] as MainTab[]).map((t) => (
-              <button key={t} className={`tab ${tab === t ? 'tab--active' : ''}`} onClick={() => setTab(t)}>{t}</button>
+            {(['GSTR-1', 'GSTR-3B', 'GSTR-4', 'GSTR-9', 'GSTR-3B Reconciliation', 'TDS/TCS Report'] as MainTab[]).map((t) => (
+              <button key={t} className={`tab ${tab === t ? 'tab--active' : ''}`}
+                onClick={() => {
+                  setTab(t);
+                  if (t === 'GSTR-4') setPeriod(recentQuarters()[0]);
+                  else if (t === 'GSTR-9') setPeriod(recentFYs()[0]);
+                  else if (/^Q[1-4]-/.test(period) || /^\d{4}-\d{2}$/.test(period)) setPeriod(recentPeriods()[1]);
+                }}>{t}</button>
             ))}
           </div>
           <div className="tabs-actions">
@@ -106,6 +129,35 @@ export function Returns() {
             </tbody>
           </table>
         )}
+
+        {tab === 'GSTR-4' && current && (
+          <table className="data-table compact">
+            <thead><tr><th>Composition Summary (Quarter {s.quarter})</th><th className="num">Value</th></tr></thead>
+            <tbody>
+              <tr><td>Outward turnover</td><td className="num">{inr(s.turnover)}</td></tr>
+              <tr><td>Composition rate</td><td className="num">{s.rate}%</td></tr>
+              <tr><td>Invoices</td><td className="num">{s.invoices}</td></tr>
+              <tr className="row-total"><td>Composition tax payable</td><td className="num">{inr(s.taxPayable)}</td></tr>
+            </tbody>
+          </table>
+        )}
+        {tab === 'GSTR-4' && !current && <p className="muted small">Quarterly composition return. Select a quarter and <b>Generate</b>.</p>}
+
+        {tab === 'GSTR-9' && current && (
+          <table className="data-table compact">
+            <thead><tr><th>Annual Return Summary — FY {s.fy}</th><th className="num">Value</th></tr></thead>
+            <tbody>
+              <tr><td>Pt II · Outward taxable — B2B</td><td className="num">{inr(s.b2bTaxable)}</td></tr>
+              <tr><td>Pt II · Outward taxable — B2C</td><td className="num">{inr(s.b2cTaxable)}</td></tr>
+              <tr><td>Pt II · Total tax on outward supplies</td><td className="num">{inr(s.outwardTax)}</td></tr>
+              <tr><td>Pt III · ITC availed (eligible)</td><td className="num pos">{inr(s.itcEligible)}</td></tr>
+              <tr><td>Pt III · ITC blocked — Sec 17(5)</td><td className="num neg">{inr(s.itcBlocked)}</td></tr>
+              <tr><td>Outward invoices / inward bills</td><td className="num">{s.outwardInvoices ?? 0} / {s.inwardBills ?? 0}</td></tr>
+              <tr className="row-total"><td>Pt IV · Net annual tax payable</td><td className="num">{inr(s.netPayable)}</td></tr>
+            </tbody>
+          </table>
+        )}
+        {tab === 'GSTR-9' && !current && <p className="muted small">Annual consolidated return. Select a financial year and <b>Generate</b>.</p>}
 
         {tab === 'GSTR-3B Reconciliation' && <div className="empty-state"><p className="muted">GSTR-2B vs purchase reconciliation — needs GSTN 2B download (credential-gated).</p></div>}
         {tab === 'TDS/TCS Report' && <div className="empty-state"><p className="muted">TDS (GSTR-7) and TCS (GSTR-8) — coming next.</p></div>}

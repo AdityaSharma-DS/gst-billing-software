@@ -28,6 +28,21 @@ export class ReportsController {
     return this.reports.taxSummary(tenantId);
   }
 
+  @Get('supply-classification')
+  supplyClassification(@CurrentTenant() tenantId: string) {
+    return this.reports.supplyClassification(tenantId);
+  }
+
+  @Get('itc-summary')
+  itcSummary(@CurrentTenant() tenantId: string) {
+    return this.reports.itcSummary(tenantId);
+  }
+
+  @Get('vendor-analytics')
+  vendorAnalytics(@CurrentTenant() tenantId: string) {
+    return this.reports.vendorAnalytics(tenantId);
+  }
+
   @Get('receivables')
   receivables(@CurrentTenant() tenantId: string) {
     return this.reports.receivables(tenantId);

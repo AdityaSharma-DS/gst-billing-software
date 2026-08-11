@@ -97,6 +97,69 @@ export class ReportsService {
     });
   }
 
+  /** Supply-type classification of outward supplies: intra/inter × B2B/B2C (SPLY vs ISUP). */
+  async supplyClassification(tenantId: string) {
+    return this.prisma.withTenant(tenantId, async (tx) => {
+      const org = await tx.organization.findFirst();
+      const home = org?.stateCode ?? (org?.gstin ? org.gstin.slice(0, 2) : undefined);
+      const bills = await tx.bill.findMany({ where: { direction: 'OUTGOING', status: { not: 'CANCELLED' } }, include: { party: true } });
+      const buckets: Record<string, { key: string; supply: string; audience: string; count: number; taxable: number; tax: number }> = {};
+      for (const b of bills) {
+        const inter = home && b.placeOfSupply && b.placeOfSupply !== home;
+        const supply = inter ? 'Inter-State (ISUP)' : 'Intra-State (SPLY)';
+        const audience = b.party?.gstin ? 'B2B' : 'B2C';
+        const key = `${supply}|${audience}`;
+        const row = (buckets[key] ??= { key, supply, audience, count: 0, taxable: 0, tax: 0 });
+        row.count++;
+        row.taxable += Number(b.subTotal);
+        row.tax += Number(b.cgstTotal) + Number(b.sgstTotal) + Number(b.igstTotal) + Number(b.cessTotal);
+      }
+      return Object.values(buckets).map((r) => ({ ...r, taxable: Math.round(r.taxable * 100) / 100, tax: Math.round(r.tax * 100) / 100 }));
+    });
+  }
+
+  /** ITC eligible vs blocked (Sec 17(5)) from purchase bills. */
+  async itcSummary(tenantId: string) {
+    return this.prisma.withTenant(tenantId, async (tx) => {
+      const purchases = await tx.bill.findMany({ where: { direction: 'INCOMING', status: { not: 'CANCELLED' } }, include: { party: true } });
+      const tax = (b: any) => Number(b.cgstTotal) + Number(b.sgstTotal) + Number(b.igstTotal) + Number(b.cessTotal);
+      let eligible = 0, blocked = 0, eligibleCount = 0, blockedCount = 0;
+      const blockedList: any[] = [];
+      for (const b of purchases) {
+        if (b.itcBlocked) { blocked += tax(b); blockedCount++; blockedList.push({ billNumber: b.billNumber, vendor: b.party?.name ?? '—', itc: Math.round(tax(b) * 100) / 100 }); }
+        else { eligible += tax(b); eligibleCount++; }
+      }
+      const r = (n: number) => Math.round(n * 100) / 100;
+      return { total: r(eligible + blocked), eligible: r(eligible), blocked: r(blocked), eligibleCount, blockedCount, blockedList };
+    });
+  }
+
+  /** Per-vendor analytics: YTD & 30-day purchases, avg invoice, outstanding, ITC, score. */
+  async vendorAnalytics(tenantId: string) {
+    return this.prisma.withTenant(tenantId, async (tx) => {
+      const vendors = await tx.party.findMany({ where: { type: 'VENDOR' } });
+      const now = new Date();
+      const fyStart = new Date(now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1, 3, 1);
+      const d30 = new Date(now.getTime() - 30 * 86400000);
+      return Promise.all(vendors.map(async (v) => {
+        const bills = await tx.bill.findMany({ where: { partyId: v.id, direction: 'INCOMING', status: { not: 'CANCELLED' } }, include: { payments: true } });
+        const ytd = bills.filter((b) => b.billDate >= fyStart);
+        const total = (arr: any[]) => arr.reduce((s, b) => s + Number(b.grandTotal), 0);
+        const paidOf = (b: any) => b.payments.reduce((s: number, p: any) => s + Number(p.amount), 0);
+        const outstanding = bills.reduce((s, b) => s + Math.max(0, Number(b.grandTotal) - paidOf(b)), 0);
+        const itc = bills.filter((b) => !b.itcBlocked).reduce((s, b) => s + Number(b.cgstTotal) + Number(b.sgstTotal) + Number(b.igstTotal), 0);
+        const ytdTotal = total(ytd);
+        const last30 = total(bills.filter((b) => b.billDate >= d30));
+        const avg = bills.length ? ytdTotal / (ytd.length || 1) : 0;
+        // Simple performance score: on-time payment ratio & activity (0–100).
+        const paidBills = bills.filter((b) => paidOf(b) >= Number(b.grandTotal) - 0.01).length;
+        const score = bills.length ? Math.round((paidBills / bills.length) * 70 + Math.min(bills.length, 6) / 6 * 30) : 0;
+        const r = (n: number) => Math.round(n * 100) / 100;
+        return { vendor: v.name, gstin: v.gstin, bills: bills.length, ytdPurchases: r(ytdTotal), last30: r(last30), avgInvoice: r(avg), outstanding: r(outstanding), itc: r(itc), score };
+      }));
+    });
+  }
+
   async receivables(tenantId: string) {
     return this.prisma.withTenant(tenantId, async (tx) => {
       const bills = await tx.bill.findMany({

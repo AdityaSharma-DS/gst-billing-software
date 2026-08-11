@@ -79,7 +79,108 @@ export class ReturnsService {
   private async buildPayload(tenantId: string, returnType: ReturnType, period: string, gstin: string | null) {
     if (returnType === 'GSTR1') return this.buildGstr1(tenantId, period, gstin);
     if (returnType === 'GSTR3B') return this.buildGstr3b(tenantId, period, gstin);
+    if (returnType === 'GSTR4') return this.buildGstr4(tenantId, period, gstin);
+    if (returnType === 'GSTR9') return this.buildGstr9(tenantId, period, gstin);
     return { payload: { gstin, fp: toFp(period), note: `${returnType} generation is not implemented yet` }, errors: [] as any[], summary: {} };
+  }
+
+  /**
+   * GSTR-4 — annual/quarterly return for Composition dealers. Composition tax is
+   * a flat % of turnover (1% traders/mfrs, 5% restaurants, 6% services) — not
+   * collected from customers. `period` here is a quarter "Qn-YYYY".
+   */
+  private async buildGstr4(tenantId: string, period: string, gstin: string | null) {
+    const { from, to } = quarterRange(period);
+    const compositionRate = 0.01; // 1% default (traders/manufacturers); configurable per business
+    const agg = await this.prisma.withTenant(tenantId, (tx) =>
+      tx.bill.aggregate({ where: { direction: 'OUTGOING', billDate: { gte: from, lt: to }, status: { not: 'CANCELLED' } }, _sum: { subTotal: true, grandTotal: true }, _count: true }),
+    );
+    const turnover = Number(agg._sum.subTotal ?? 0);
+    const taxPayable = n2(turnover * compositionRate);
+    const payload = {
+      gstin, fp: toFp2(period),
+      txos: { turnover: n2(turnover), rt: compositionRate * 100, tax: taxPayable },
+      // Inward supplies attracting reverse charge would go in table 4B (not tracked yet).
+      summary: { invoices: agg._count },
+    };
+    const errors = gstin ? [] : [{ message: 'Organization GSTIN not set' }];
+    return { payload, errors, summary: { quarter: period, turnover: n2(turnover), rate: compositionRate * 100, taxPayable, invoices: agg._count } };
+  }
+
+  /**
+   * GSTR-9 — annual return. Consolidates the full financial year's outward
+   * supplies (Pt II), ITC availed on inward supplies (Pt III) and the resulting
+   * annual tax liability (Pt IV). `period` is the FY string, e.g. "2026-27".
+   */
+  private async buildGstr9(tenantId: string, period: string, gstin: string | null) {
+    const { from, to } = fyRange(period);
+    const bills = await this.prisma.withTenant(tenantId, (tx) =>
+      tx.bill.findMany({
+        where: { billDate: { gte: from, lt: to }, status: { not: 'CANCELLED' } },
+        include: { party: true },
+      }),
+    );
+
+    // Pt II — outward supplies on which tax is payable (split B2B / B2C).
+    const out = { b2bTxval: 0, b2cTxval: 0, iamt: 0, camt: 0, samt: 0, csamt: 0 };
+    // Pt III — ITC availed on inward supplies (blocked ITC excluded, Sec 17(5)).
+    const itc = { txval: 0, iamt: 0, camt: 0, samt: 0, csamt: 0, blocked: 0 };
+    let outCount = 0, inCount = 0;
+
+    for (const b of bills) {
+      if (b.direction === 'OUTGOING') {
+        if (!['FINALIZED', 'VERIFIED', 'APPROVED'].includes(b.status)) continue;
+        const tx = Number(b.subTotal);
+        if (b.party?.gstin) out.b2bTxval += tx; else out.b2cTxval += tx;
+        out.iamt += Number(b.igstTotal); out.camt += Number(b.cgstTotal); out.samt += Number(b.sgstTotal); out.csamt += Number(b.cessTotal);
+        outCount++;
+      } else {
+        const tax = Number(b.igstTotal) + Number(b.cgstTotal) + Number(b.sgstTotal) + Number(b.cessTotal);
+        if ((b as any).itcBlocked) { itc.blocked += tax; }
+        else {
+          itc.txval += Number(b.subTotal);
+          itc.iamt += Number(b.igstTotal); itc.camt += Number(b.cgstTotal); itc.samt += Number(b.sgstTotal); itc.csamt += Number(b.cessTotal);
+        }
+        inCount++;
+      }
+    }
+
+    const outTax = out.iamt + out.camt + out.samt + out.csamt;
+    const itcTotal = itc.iamt + itc.camt + itc.samt + itc.csamt;
+    const net = {
+      iamt: n2(out.iamt - itc.iamt), camt: n2(out.camt - itc.camt),
+      samt: n2(out.samt - itc.samt), csamt: n2(out.csamt - itc.csamt),
+    };
+
+    const payload = {
+      gstin, fy: period,
+      // Pt II Table 4 — outward supplies on which tax is payable
+      pt2_outward: {
+        b2b: { txval: n2(out.b2bTxval) },
+        b2c: { txval: n2(out.b2cTxval) },
+        tax: { iamt: n2(out.iamt), camt: n2(out.camt), samt: n2(out.samt), csamt: n2(out.csamt) },
+        total_taxable: n2(out.b2bTxval + out.b2cTxval),
+      },
+      // Pt III Table 6 — ITC availed
+      pt3_itc: { txval: n2(itc.txval), iamt: n2(itc.iamt), camt: n2(itc.camt), samt: n2(itc.samt), csamt: n2(itc.csamt) },
+      // Pt IV — tax payable (net of ITC)
+      pt4_tax_payable: net,
+    };
+
+    const errors: { message: string }[] = [];
+    if (!gstin) errors.push({ message: 'Your organization GSTIN is not set (Settings → Company Details)' });
+
+    return {
+      payload, errors,
+      summary: {
+        fy: period,
+        outwardTaxable: n2(out.b2bTxval + out.b2cTxval), outwardTax: n2(outTax),
+        b2bTaxable: n2(out.b2bTxval), b2cTaxable: n2(out.b2cTxval),
+        itcEligible: n2(itcTotal), itcBlocked: n2(itc.blocked),
+        netPayable: n2(outTax - itcTotal),
+        outwardInvoices: outCount, inwardBills: inCount,
+      },
+    };
   }
 
   /** GSTR-1 — outward supplies grouped into B2B / B2CL / B2CS / CDNR / HSN / DOCS. */
@@ -227,6 +328,22 @@ export class ReturnsService {
 }
 
 function fmtDate(d: Date) { const dt = new Date(d); return `${String(dt.getDate()).padStart(2, '0')}-${String(dt.getMonth() + 1).padStart(2, '0')}-${dt.getFullYear()}`; }
+// Quarter period "Q2-2026" → date range. Q1=Apr-Jun, Q2=Jul-Sep, Q3=Oct-Dec, Q4=Jan-Mar (Indian FY).
+function quarterRange(period: string) {
+  const m = /Q([1-4])-(\d{4})/.exec(period);
+  if (!m) { const now = new Date(); return { from: new Date(now.getFullYear(), 0, 1), to: new Date(now.getFullYear() + 1, 0, 1) }; }
+  const q = Number(m[1]); const y = Number(m[2]);
+  const startMonth = [3, 6, 9, 0][q - 1];          // Apr, Jul, Oct, Jan (0-indexed)
+  const startYear = q === 4 ? y + 1 : y;           // Q4 spills into the next calendar year
+  return { from: new Date(startYear, startMonth, 1), to: new Date(startYear, startMonth + 3, 1) };
+}
+const toFp2 = (period: string) => period.replace('-', '');
+// Financial-year range for GSTR-9. "2026-27" → 1 Apr 2026 … 1 Apr 2027 (exclusive).
+function fyRange(period: string) {
+  const m = /(\d{4})/.exec(period);
+  const y = m ? Number(m[1]) : new Date().getFullYear();
+  return { from: new Date(y, 3, 1), to: new Date(y + 1, 3, 1) };
+}
 function roundObj(o: any) { const r: any = {}; for (const k in o) r[k] = n2(o[k]); return r; }
 function sectionCounts(p: any) {
   return { b2b: p.b2b?.length ?? 0, b2cl: p.b2cl?.length ?? 0, b2cs: p.b2cs?.length ?? 0, cdnr: p.cdnr?.length ?? 0, hsn: p.hsn?.data?.length ?? 0 };

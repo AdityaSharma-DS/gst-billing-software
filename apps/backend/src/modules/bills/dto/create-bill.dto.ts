@@ -27,6 +27,7 @@ export class CreateBillDto {
   @IsOptional() @IsString() vendorInvoiceNo?: string;
   @IsOptional() @IsIn(['PAID', 'UNPAID', 'PARTIAL', 'OVERDUE']) paymentStatus?: string;
   @IsOptional() @IsString() paymentMode?: string;
+  @IsOptional() @IsBoolean() itcBlocked?: boolean;
   @IsOptional() @IsString() partyId?: string;
   @IsOptional() @IsString() placeOfSupply?: string;
   @IsOptional() @IsBoolean() reverseCharge?: boolean;

@@ -83,6 +83,7 @@ export class BillsService {
           vendorInvoiceNo: dto.vendorInvoiceNo,
           paymentStatus: dto.paymentStatus ?? 'UNPAID',
           paymentMode: dto.paymentMode,
+          itcBlocked: dto.itcBlocked ?? false,
           partyId: dto.partyId,
           placeOfSupply: dto.placeOfSupply,
           reverseCharge: dto.reverseCharge ?? false,
@@ -129,6 +130,7 @@ export class BillsService {
           vendorInvoiceNo: dto.vendorInvoiceNo ?? existing.vendorInvoiceNo,
           paymentStatus: dto.paymentStatus ?? existing.paymentStatus,
           paymentMode: dto.paymentMode ?? existing.paymentMode,
+          itcBlocked: dto.itcBlocked ?? existing.itcBlocked,
           partyId: dto.partyId,
           placeOfSupply: dto.placeOfSupply,
           reverseCharge: dto.reverseCharge ?? false,
@@ -179,19 +181,26 @@ export class BillsService {
   private async computeTotals(tenantId: string, dto: CreateBillDto) {
     const org = await this.prisma.withTenant(tenantId, (tx) => tx.organization.findFirst());
     const intraState = this.gst.isIntraState(org?.stateCode ?? undefined, dto.placeOfSupply);
+    // GST is only collected by REGULAR-scheme sellers. Composition dealers and
+    // unregistered sellers issue a Bill of Supply with no tax. Bill of Supply
+    // document type also forces zero tax.
+    const gstApplicable = (org?.taxRegime ?? 'REGULAR') === 'REGULAR' && dto.invoiceType !== 'BILL_OF_SUPPLY';
 
     let subTotal = 0, cgstTotal = 0, sgstTotal = 0, igstTotal = 0, cessTotal = 0, lineDiscounts = 0;
     const lineItems = dto.lineItems.map((li) => {
       const gross = li.rate * li.quantity;
       const discount = li.discount ?? 0;
       const taxableValue = Math.max(0, gross - discount);
-      const tax = this.gst.computeLineTax({ taxableValue, gstRate: li.gstRate, cessRate: li.cessRate }, intraState);
+      const tax = gstApplicable
+        ? this.gst.computeLineTax({ taxableValue, gstRate: li.gstRate, cessRate: li.cessRate }, intraState)
+        : { cgst: 0, sgst: 0, igst: 0, cess: 0, total: taxableValue };
+      const gstRate = gstApplicable ? li.gstRate : 0;
       subTotal += taxableValue; lineDiscounts += discount;
       cgstTotal += tax.cgst; sgstTotal += tax.sgst; igstTotal += tax.igst; cessTotal += tax.cess;
       return {
         tenantId, description: li.description, hsnSacCode: li.hsnSacCode,
         quantity: li.quantity, unit: li.unit, rate: li.rate, discount,
-        taxableValue, gstRate: li.gstRate, cgst: tax.cgst, sgst: tax.sgst, igst: tax.igst, cess: tax.cess,
+        taxableValue, gstRate, cgst: tax.cgst, sgst: tax.sgst, igst: tax.igst, cess: tax.cess,
         lineTotal: tax.total,
       };
     });

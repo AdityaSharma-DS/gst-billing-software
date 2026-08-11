@@ -22,6 +22,7 @@ export function AddPurchaseModal({ onClose, onSaved }: { onClose: () => void; on
   const [paymentMode, setPaymentMode] = useState('');
   const [stateCode, setStateCode] = useState(getDefaultState()); // pre-fill locked default
   const [description, setDescription] = useState('');
+  const [itcBlocked, setItcBlocked] = useState(false);
   const [items, setItems] = useState<Item[]>([newItem()]);
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
@@ -53,7 +54,7 @@ export function AddPurchaseModal({ onClose, onSaved }: { onClose: () => void; on
         direction: 'INCOMING', billDate: new Date(date).toISOString(),
         partyId, placeOfSupply: stateCode || undefined,
         vendorInvoiceNo: vendorInvoiceNo || undefined, paymentStatus, paymentMode: paymentMode || undefined,
-        notes: description || undefined, lineItems,
+        itcBlocked, notes: description || undefined, lineItems,
       });
       onSaved(); onClose();
     } catch (e: any) {
@@ -92,6 +93,7 @@ export function AddPurchaseModal({ onClose, onSaved }: { onClose: () => void; on
 
         <StateSelect value={stateCode} onChange={setStateCode} label="Place of Supply (State)" />
         <label>Description<input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional note" /></label>
+        <label className="checkbox span2"><input type="checkbox" checked={itcBlocked} onChange={(e) => setItcBlocked(e.target.checked)} /> ITC blocked under Sec 17(5) (input tax credit not claimable)</label>
       </div>
 
       <h4 className="section-label">List Items</h4>

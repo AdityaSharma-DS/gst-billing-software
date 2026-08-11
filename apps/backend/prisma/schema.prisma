@@ -62,6 +62,12 @@ model Organization {
   bankIfsc          String?
   upiId             String?
   defaultTerms      String?  // default Terms & Conditions for invoices
+  // NIC e-Invoice / e-Way Bill API credentials (per-taxpayer, issued on the
+  // government portal). The GSP (WhiteBooks) client_id/secret is platform-wide;
+  // these identify THIS taxpayer to NIC. gspUsername/gspPassword are the API
+  // user created under the taxpayer's GST login (distinct from portal login).
+  gspUsername       String?
+  gspPassword       String?  // TODO: encrypt at rest before production
   // Branding
   logoUrl       String?
   addressLine1  String?
@@ -170,6 +176,7 @@ model Bill {
   vendorInvoiceNo String?  // supplier's own invoice/bill number (purchases)
   paymentStatus String   @default("UNPAID") // PAID | UNPAID | PARTIAL | OVERDUE
   paymentMode   String?  // Cash | UPI | Bank Transfer | Card | Cheque
+  itcBlocked    Boolean  @default(false)     // ITC ineligible under Sec 17(5) (purchases)
   partyId       String?
   placeOfSupply String?  // state code; drives CGST/SGST vs IGST
   supplyType    SupplyType @default(B2B)

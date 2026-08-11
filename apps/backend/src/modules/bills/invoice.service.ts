@@ -81,10 +81,13 @@ export class InvoiceService {
     const lbl = (t: string, x: number, y: number, w?: number) => doc.font(body).fontSize(7.5).fillColor(LABEL).text(t, x, y, { width: w, lineBreak: false });
     const val = (t: string, x: number, y: number, w?: number, align: any = 'left') => doc.font(bold).fontSize(8.5).fillColor(TEXT).text(t ?? '', x, y, { width: w, align, lineBreak: !w ? false : true });
 
+    // Composition & unregistered sellers cannot issue a Tax Invoice — always Bill of Supply.
+    const regime = org?.taxRegime ?? 'REGULAR';
+    const nonGst = regime !== 'REGULAR';
     const title = bill.documentType === 'CREDIT_NOTE' ? 'CREDIT NOTE'
       : bill.documentType === 'DELIVERY_CHALLAN' ? 'DELIVERY CHALLAN'
       : bill.invoiceType === 'PROFORMA' ? 'PROFORMA INVOICE'
-      : bill.invoiceType === 'BILL_OF_SUPPLY' ? 'BILL OF SUPPLY'
+      : (nonGst || bill.invoiceType === 'BILL_OF_SUPPLY') ? 'BILL OF SUPPLY'
       : 'TAX INVOICE';
     const noLabel = bill.invoiceType === 'PROFORMA' ? 'Proforma Invoice No' : 'Invoice No';
 
@@ -244,6 +247,13 @@ export class InvoiceService {
     for (const line of String(termsText).split('\n').filter(Boolean)) {
       doc.text('• ' + line.trim(), L + 8, ty, { width: 350 });
       ty = doc.y + 2;
+    }
+    // Mandatory GST declaration for non-regular sellers.
+    if (nonGst) {
+      const decl = regime === 'COMPOSITION'
+        ? 'Composition taxable person — not eligible to collect tax on supplies.'
+        : 'Supplier not registered under GST. Tax is not applicable on this bill.';
+      doc.font(content).fontSize(7).fillColor('#993C1D').text(decl, L + 8, y + h8 - 16, { width: 360 });
     }
     doc.font(body).fontSize(8).fillColor(LABEL).text('Authorised Signature', 388, y + h8 - 34, { width: R - 388 - 8, align: 'right' });
     doc.font(bold).fontSize(8.5).fillColor(TEXT).text(org?.legalName ?? 'DONICY', 388, y + h8 - 22, { width: R - 388 - 8, align: 'right' });
