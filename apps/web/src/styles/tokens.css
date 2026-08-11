@@ -56,3 +56,44 @@
 
   --shadow-card: 0 1px 3px rgba(16,24,40,0.06), 0 1px 2px rgba(16,24,40,0.04);
 }
+
+/* ── Accent presets (Settings → Theme "Pre-prepared colors") ── */
+:root[data-accent="blue"] {
+  --color-primary: #3B6FE0; --color-primary-hover: #2C59C4;
+  --color-primary-300: #6E97EC; --color-primary-200: #A9C1F5; --color-primary-100: #D6E2FB; --color-primary-50: #EDF3FE;
+}
+:root[data-accent="emerald"] {
+  --color-primary: #0F9E6E; --color-primary-hover: #0B815A;
+  --color-primary-300: #4FBF98; --color-primary-200: #97DBC3; --color-primary-100: #CFEEE1; --color-primary-50: #E9F7F1;
+}
+:root[data-accent="rose"] {
+  --color-primary: #E0446B; --color-primary-hover: #C42F55;
+  --color-primary-300: #EC7692; --color-primary-200: #F5A9BC; --color-primary-100: #FBD6DF; --color-primary-50: #FEEDF1;
+}
+
+/* ── Dark theme ── */
+:root[data-theme="dark"] {
+  --color-bg: #131418;
+  --color-surface: #1E1F24;
+  --color-sidebar: #1B1C21;
+  --color-border: #313339;
+  --color-divider: #2A2C32;
+  --color-text: #ECEDEF;
+  --color-text-muted: #9A9CA4;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+}
+/* Keep the login card readable in dark mode */
+:root[data-theme="dark"] .auth-wrap { background: #0E0F12; }
+:root[data-theme="dark"] .auth-card { background: #1E1F24; }
+
+/* High-contrast toggle */
+:root[data-contrast="high"] {
+  --color-text-muted: #5F6067;
+  --color-border: #C2C2C6;
+  --color-divider: #D8D8DC;
+}
+:root[data-theme="dark"][data-contrast="high"] {
+  --color-text-muted: #C4C6CC;
+  --color-border: #4A4C53;
+  --color-divider: #3A3C42;
+}

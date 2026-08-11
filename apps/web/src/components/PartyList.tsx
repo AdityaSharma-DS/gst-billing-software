@@ -97,6 +97,9 @@ export function PartyList({ cfg }: { cfg: Config }) {
     queryFn: async () => (await api.get<Party[]>(`/parties?type=${cfg.type}`)).data,
   });
 
+  const emailValid = !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
+  const phoneValid = !form.phone || /^[6-9]\d{9}$/.test(form.phone.replace(/\D/g, '').replace(/^91/, ''));
+
   const save = useMutation({
     mutationFn: async () => {
       const body = {
@@ -148,7 +151,7 @@ export function PartyList({ cfg }: { cfg: Config }) {
           onClose={close}
           footer={<>
             <button className="btn-ghost" onClick={close}>Cancel</button>
-            <button className="btn-primary" disabled={!form.name || save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Saving…' : `Save ${cfg.noun}`}</button>
+            <button className="btn-primary" disabled={!form.name || !emailValid || !phoneValid || save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Saving…' : `Save ${cfg.noun}`}</button>
           </>}
         >
           <div className="form-grid">
@@ -162,6 +165,8 @@ export function PartyList({ cfg }: { cfg: Config }) {
             <label>Phone<input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
           </div>
           {form.gstin && !isValidGstin(form.gstin) && <p className="warn-item">⚠ GSTIN checksum doesn't match — double-check before saving.</p>}
+          {!emailValid && <p className="warn-item">⚠ Enter a valid email address.</p>}
+          {!phoneValid && <p className="warn-item">⚠ Enter a valid 10-digit mobile number.</p>}
         </Modal>
       )}
     </section>

@@ -7,6 +7,7 @@ import { stateName } from '../lib/states';
 import { useBarcodeScanner } from '../components/useBarcodeScanner';
 import { getScannerPrefs, setScannerPrefs, ScannerPrefs } from '../lib/scanner';
 import { toast } from '../components/Toaster';
+import { ACCENTS, Accent, Theme, getTheme, getAccent, getContrast, setTheme, setAccent, setContrast } from '../lib/theme';
 
 interface TeamUser { id: string; email: string; fullName: string; role: 'ADMIN' | 'ACCOUNTANT' | 'VIEWER'; isActive: boolean; lastLoginAt?: string | null; }
 
@@ -168,6 +169,49 @@ const FIN_YEARS = ['2024-25', '2025-26', '2026-27', '2027-28', '2028-29'];
 
 type Org = Record<string, any>;
 
+const SETTINGS_TABS = ['Theme', 'Company Details', 'Terms & Conditions', 'Notifications', 'General', 'App Update'] as const;
+type SettingsTab = typeof SETTINGS_TABS[number];
+
+/** Appearance controls — theme, accent colour, contrast (per-browser). */
+function ThemeSection() {
+  const [theme, setThemeState] = useState<Theme>(getTheme());
+  const [accent, setAccentState] = useState<Accent>(getAccent());
+  const [contrast, setContrastState] = useState(getContrast());
+  return (
+    <div className="card">
+      <h4 className="section-label">Pre-prepared colours</h4>
+      <div className="swatch-row">
+        {ACCENTS.map((a) => (
+          <button
+            key={a.id}
+            className={`swatch ${accent === a.id ? 'swatch--active' : ''}`}
+            style={{ background: a.swatch }}
+            title={a.label}
+            aria-label={a.label}
+            onClick={() => { setAccent(a.id); setAccentState(a.id); }}
+          />
+        ))}
+      </div>
+
+      <h4 className="section-label">Theme</h4>
+      <div className="form-grid form-grid--2">
+        <label>Appearance
+          <select value={theme} onChange={(e) => { const t = e.target.value as Theme; setTheme(t); setThemeState(t); }}>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+      </div>
+
+      <label className="checkbox toggle-row" style={{ marginTop: 16 }}>
+        <input type="checkbox" checked={contrast} onChange={(e) => { setContrast(e.target.checked); setContrastState(e.target.checked); }} />
+        <span><b>Enhance contrast</b><br /><span className="muted small">When enabled, contrast between text/controls and their backgrounds is increased.</span></span>
+      </label>
+      <p className="muted small" style={{ marginTop: 12 }}>Theme &amp; colour are saved to this browser and apply instantly.</p>
+    </div>
+  );
+}
+
 export function Settings() {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -175,6 +219,7 @@ export function Settings() {
   const [saved, setSaved] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [tab, setTab] = useState<SettingsTab>('Company Details');
 
   const { data: org } = useQuery({ queryKey: ['organization'], queryFn: async () => (await api.get<Org>('/organization')).data });
   useEffect(() => { if (org) setForm(org); }, [org]);
@@ -199,6 +244,17 @@ export function Settings() {
     } catch { toast('SMTP check failed', 'error'); }
   }
 
+  const [gspTesting, setGspTesting] = useState(false);
+  async function verifyGsp() {
+    setGspTesting(true);
+    try {
+      const { data } = await api.post('/organization/verify-gsp', {});
+      toast(data.ok ? data.message : 'GSP check failed', data.ok ? 'success' : 'error');
+    } catch (e: any) {
+      toast(e?.response?.data?.message ?? 'GSP authentication failed', 'error');
+    } finally { setGspTesting(false); }
+  }
+
   async function uploadLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
     setUploading(true);
@@ -210,18 +266,60 @@ export function Settings() {
     } finally { setUploading(false); }
   }
 
+  const showSave = tab === 'Company Details' || tab === 'Terms & Conditions';
+
   return (
     <section className="page">
       <div className="page-head">
-        <h2>Settings — Organization</h2>
+        <h2>Settings</h2>
         <div className="page-actions">
           {saved && <span className="pos small">{saved}</span>}
-          <button className="btn-ghost" onClick={verifySmtp}>Test Email (SMTP)</button>
-          <button className="btn-primary" disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save Changes'}</button>
+          {showSave && <button className="btn-primary" disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save Changes'}</button>}
         </div>
       </div>
 
-      {/* Branding */}
+      <div className="tabs">
+        {SETTINGS_TABS.map((t) => (
+          (t !== 'General' || currentRole() === 'ADMIN')
+            ? <button key={t} className={`tab ${tab === t ? 'tab--active' : ''}`} onClick={() => setTab(t)}>{t}</button>
+            : null
+        ))}
+      </div>
+
+      {tab === 'Theme' && <ThemeSection />}
+
+      {tab === 'App Update' && (
+        <div className="card" style={{ maxWidth: 520 }}>
+          <h3 className="card-title">App Update</h3>
+          <div className="kv-row"><span className="muted">Version</span><b>DONICY 1.0.0</b></div>
+          <div className="kv-row"><span className="muted">Channel</span><b>Stable</b></div>
+          <div className="kv-row"><span className="muted">Status</span><span className="badge badge--finalized">Up to date</span></div>
+          <p className="muted small" style={{ marginTop: 12 }}>You're on the latest version. Updates are rolled out automatically by the DONICY team.</p>
+        </div>
+      )}
+
+      {tab === 'Notifications' && (
+        <div className="card">
+          <div className="card-head">
+            <h3 className="card-title">Email (SMTP)</h3>
+            <button className="btn-ghost" onClick={verifySmtp}>Test Email (SMTP)</button>
+          </div>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Invoices and receipts are emailed via the SMTP server configured in your deployment. Use <b>Test Email</b>
+            to verify the connection. GST due-date and approval reminders are sent from here once enabled.
+          </p>
+        </div>
+      )}
+
+      {tab === 'General' && currentRole() === 'ADMIN' && (
+        <>
+          <BarcodeSection />
+          <UsersSection />
+        </>
+      )}
+
+      {/* ── Company Details tab ── */}
+      {tab === 'Company Details' && <>
       <div className="card">
         <h3 className="card-title">Company Branding</h3>
         <div className="brand-row">
@@ -280,6 +378,31 @@ export function Settings() {
         </div>
       </div>
 
+      {/* GST API credentials (NIC e-Invoice / e-Way Bill via GSP) */}
+      <div className="card">
+        <div className="card-head">
+          <h3 className="card-title">GST APIs — e-Invoice &amp; e-Way Bill</h3>
+          <button className="btn-ghost" disabled={gspTesting} onClick={verifyGsp}>{gspTesting ? 'Testing…' : 'Test Connection'}</button>
+        </div>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Enter the API username &amp; password you created on the government e-Invoice / e-Way Bill portal for
+          this GSTIN (distinct from your portal login). These let the app generate real IRNs and e-Way Bills
+          through the GSP. On the NIC <b>sandbox</b>, use the test credentials supplied with your GSP account.
+        </p>
+        <div className="form-grid form-grid--2">
+          <label>API Username
+            <input value={form.gspUsername ?? ''} onChange={(e) => set('gspUsername', e.target.value)} placeholder="NIC API username" autoComplete="off" />
+          </label>
+          <label>API Password
+            <input type="password" value={form.gspPassword ?? ''} onChange={(e) => set('gspPassword', e.target.value)} placeholder={form.gspPasswordSet ? 'unchanged — leave to keep' : ''} autoComplete="new-password" />
+          </label>
+        </div>
+        <p className="muted small" style={{ marginTop: 8 }}>
+          The password is stored server-side and never shown here again. The GSP account (Client ID/Secret,
+          base URL) is configured centrally by the platform operator.
+        </p>
+      </div>
+
       {/* Bank details */}
       <div className="card">
         <h3 className="card-title">Bank Details (shown on invoices)</h3>
@@ -292,18 +415,15 @@ export function Settings() {
           <label>UPI ID<input value={form.upiId ?? ''} onChange={(e) => set('upiId', e.target.value)} /></label>
         </div>
       </div>
+      </>}
 
-      {/* Default terms */}
-      <div className="card">
-        <h3 className="card-title">Default Terms &amp; Conditions</h3>
-        <textarea className="terms-input" rows={4} value={form.defaultTerms ?? ''} onChange={(e) => set('defaultTerms', e.target.value)} placeholder="One term per line — printed on every invoice by default." />
-      </div>
-
-      {/* Barcode device integration (per-device, all roles) */}
-      <BarcodeSection />
-
-      {/* Team & roles — admin only */}
-      {currentRole() === 'ADMIN' && <UsersSection />}
+      {/* ── Terms & Conditions tab ── */}
+      {tab === 'Terms & Conditions' && (
+        <div className="card">
+          <h3 className="card-title">Default Terms &amp; Conditions</h3>
+          <textarea className="terms-input" rows={6} value={form.defaultTerms ?? ''} onChange={(e) => set('defaultTerms', e.target.value)} placeholder="One term per line — printed on every invoice by default." />
+        </div>
+      )}
     </section>
   );
 }

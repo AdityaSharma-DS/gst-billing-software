@@ -79,6 +79,9 @@ export function BillForm() {
     queryKey: ['products'],
     queryFn: async () => (await api.get<Product[]>('/products')).data,
   });
+  // Seller's GST regime governs whether tax applies at all.
+  const { data: org } = useQuery({ queryKey: ['organization'], queryFn: async () => (await api.get<{ taxRegime?: string }>('/organization')).data });
+  const gstRegistered = (org?.taxRegime ?? 'REGULAR') === 'REGULAR';
 
   useEffect(() => {
     if (!id) return;
@@ -97,7 +100,7 @@ export function BillForm() {
 
   const update = (lid: string, k: keyof Line, v: string | number) => setLines((ls) => ls.map((l) => (l.id === lid ? { ...l, [k]: v } : l)));
 
-  const noGst = invType === 'BILL_OF_SUPPLY';
+  const noGst = invType === 'BILL_OF_SUPPLY' || !gstRegistered;
 
   const appendProduct = (p: { name: string; hsnSacCode?: string | null; unit?: string | null; rate: any; gstRate: any }) =>
     setLines((ls) => [...ls, { ...newLine(), desc: p.name, hsn: p.hsnSacCode ?? '', unit: p.unit ?? 'pcs', rate: Number(p.rate) || 0, gst: Number(p.gstRate) || 18 }]);
@@ -177,6 +180,8 @@ export function BillForm() {
   async function saveNewClient() {
     if (!nc.name.trim()) { setNcErr('Business name is required.'); return; }
     if (nc.gstin && !isValidGstin(nc.gstin)) { setNcErr('GSTIN is invalid (checksum failed). Fix it or leave blank.'); return; }
+    if (nc.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nc.email)) { setNcErr('Enter a valid email address.'); return; }
+    if (nc.phone && !/^[6-9]\d{9}$/.test(nc.phone.replace(/\D/g, '').replace(/^91/, ''))) { setNcErr('Enter a valid 10-digit mobile number.'); return; }
     setNcErr(''); setNcSaving(true);
     try {
       const created = (await api.post('/parties', {
@@ -213,20 +218,24 @@ export function BillForm() {
         <button className="btn-ghost" onClick={() => nav(listUrl)}>← Back</button>
       </div>
 
-      {direction === 'OUTGOING' && (
-        <>
+      {direction === 'OUTGOING' && !gstRegistered && (
+        <div className="warn-item" style={{ marginBottom: 12 }}>
+          Your organization is <b>{org?.taxRegime === 'COMPOSITION' ? 'a Composition dealer' : 'not registered under GST'}</b> — this document is a <b>Bill of Supply</b> and no GST is charged. Set the regime to Regular in Settings → GST &amp; Tax to issue tax invoices.
+        </div>
+      )}
+
+      {direction === 'OUTGOING' && gstRegistered && (
+        <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
+          <h4 className="section-label">Invoice Type</h4>
           <div className="seg-row">
-            <span className="seg-label">Invoice Type</span>
             {INV_TYPES.map((t) => (
               <button key={t.id} className={`seg ${invType === t.id ? 'seg--active' : ''}`} onClick={() => setInvType(t.id)}>{t.label}</button>
             ))}
-          </div>
-          <div className="tabs">
             {DOC_TYPES.map((t) => (
-              <button key={t.id} className={`tab ${docType === t.id ? 'tab--active' : ''}`} onClick={() => setDocType(t.id)}>{t.label}</button>
+              <button key={t.id} className={`seg ${docType === t.id ? 'seg--active' : ''}`} onClick={() => setDocType(t.id)}>{t.label}</button>
             ))}
           </div>
-        </>
+        </div>
       )}
 
       <div className="invoice-layout">

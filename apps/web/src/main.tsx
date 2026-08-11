@@ -4,6 +4,10 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import './styles.css';
+import { apply as applyTheme } from './lib/theme';
+
+// Apply saved theme/accent before first paint.
+applyTheme();
 
 const queryClient = new QueryClient();
 
