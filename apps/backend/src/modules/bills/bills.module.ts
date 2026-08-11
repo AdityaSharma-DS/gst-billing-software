@@ -12,9 +12,10 @@ import { WhatsappService } from './whatsapp.service';
 import { EwayService } from './eway.service';
 import { GstModule } from '../gst/gst.module';
 import { ProductsModule } from '../products/products.module';
+import { GstnModule } from '../gstn/gstn.module';
 
 @Module({
-  imports: [GstModule, ConfigModule, ProductsModule],
+  imports: [GstModule, ConfigModule, ProductsModule, GstnModule],
   controllers: [BillsController, ReceiptsController, EwayController],
   providers: [BillsService, InvoiceService, ImportService, MailService, PaymentsService, WhatsappService, EwayService],
   exports: [BillsService],

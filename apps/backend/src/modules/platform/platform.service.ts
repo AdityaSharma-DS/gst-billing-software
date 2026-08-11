@@ -108,20 +108,37 @@ export class PlatformService {
   // ── GST API configuration (platform-wide) ──
   async getGstConfig() {
     const row = await this.prisma.platformSetting.findUnique({ where: { key: GST_CONFIG_KEY } });
-    return row?.value ?? {
-      environment: 'sandbox',
-      einvoiceBaseUrl: 'https://einv-apisandbox.nic.in', einvoiceClientId: '', einvoiceClientSecret: '',
-      ewaybillBaseUrl: '', ewaybillClientId: '', ewaybillClientSecret: '',
-      gstnBaseUrl: 'https://developer.gst.gov.in/apiportal', gstnApiKey: '',
+    const defaults = {
+      // WhiteBooks GSP — one Client ID/Secret pair covers e-Invoice, e-Way Bill,
+      // GSTR filing, GSTR-2B and Payment APIs.
+      provider: 'whitebooks',
+      environment: 'sandbox',            // sandbox | production
+      baseUrl: 'https://api.whitebooks.in',
+      email: '',                         // WhiteBooks account email
+      clientId: '',                      // sandbox GSTS... / production GSTP...
+      clientSecret: '',
+      ipAddress: '',                     // public IP whitelisted with NIC/GSP
       fastGstUrl: '', fastGstApiKey: '',
     };
+    // Merge so newly-added keys appear even for configs saved under the old shape.
+    return { ...defaults, ...((row?.value as object) ?? {}) };
+  }
+
+  /** Never expose the client secret to the browser; report only whether it's set. */
+  async getGstConfigMasked() {
+    const cfg: any = await this.getGstConfig();
+    return { ...cfg, clientSecret: cfg.clientSecret ? '********' : '', clientSecretSet: !!cfg.clientSecret };
   }
 
   async setGstConfig(value: any) {
+    const existing: any = await this.getGstConfig();
+    // If the UI sends the masked placeholder, keep the stored secret.
+    const merged = { ...existing, ...value };
+    if (!value?.clientSecret || value.clientSecret === '********') merged.clientSecret = existing.clientSecret ?? '';
     await this.prisma.platformSetting.upsert({
       where: { key: GST_CONFIG_KEY },
-      create: { key: GST_CONFIG_KEY, value },
-      update: { value },
+      create: { key: GST_CONFIG_KEY, value: merged },
+      update: { value: merged },
     });
     return { saved: true };
   }

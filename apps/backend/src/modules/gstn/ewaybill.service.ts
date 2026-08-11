@@ -1,24 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { GstnAuthService } from './gstn-auth.service';
+import { WhiteBooksService, GspCredentials } from './whitebooks.service';
+
+type OrgCreds = { gstin?: string | null; gspUsername?: string | null; gspPassword?: string | null };
 
 /**
- * e-Way Bill integration — follows Api-docs/e-WayBill API Flow.pdf:
- *   auth -> generate / cancel / reject EWB; update Part-B & vehicle;
- *   extend validity; consolidated EWB; rich query endpoints.
+ * e-Way Bill integration — thin wrapper over the WhiteBooks GSP client.
+ * See Api-docs/e-WayBill API Flow.pdf and the OpenAPI collection.
  */
 @Injectable()
 export class EWayBillService {
-  constructor(private readonly auth: GstnAuthService) {}
+  constructor(private readonly gsp: WhiteBooksService) {}
 
-  async generate(gstin: string, ewbPayload: unknown): Promise<{ ewbNo: string; validUpto: string }> {
-    await this.auth.getToken(gstin);
-    // TODO: POST `${EWAYBILL_BASE_URL}/.../ewayapi` with the EWB payload.
-    return { ewbNo: 'PLACEHOLDER_EWB', validUpto: new Date().toISOString() };
+  isConfigured(org: OrgCreds) {
+    return this.gsp.isConfigured(org);
   }
 
-  async generateByIrn(gstin: string, irn: string) {
-    await this.auth.getToken(gstin);
-    // TODO: generate EWB using IRN (per e-Invoice flow).
-    return { ewbNo: 'PLACEHOLDER_EWB_FROM_IRN', irn };
+  generate(org: OrgCreds, ewbPayload: Record<string, unknown>) {
+    return this.gsp.generateEwayBill(org, ewbPayload);
+  }
+
+  getGstinDetails(org: OrgCreds, lookupGstin: string) {
+    return this.gsp.getGstinDetails(org, lookupGstin);
   }
 }
+
+export type { GspCredentials };

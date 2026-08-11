@@ -51,7 +51,7 @@ export class PlatformController {
   @Get('gst-config')
   @UseGuards(PlatformAuthGuard)
   gstConfig() {
-    return this.platform.getGstConfig();
+    return this.platform.getGstConfigMasked();
   }
 
   @Put('gst-config')

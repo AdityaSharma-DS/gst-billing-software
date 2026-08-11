@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { GstnAuthService } from './gstn-auth.service';
+import { WhiteBooksService } from './whitebooks.service';
 import { EInvoiceService } from './einvoice.service';
 import { EWayBillService } from './ewaybill.service';
 
 @Module({
   imports: [ConfigModule],
-  providers: [GstnAuthService, EInvoiceService, EWayBillService],
-  exports: [EInvoiceService, EWayBillService],
+  providers: [WhiteBooksService, EInvoiceService, EWayBillService],
+  exports: [WhiteBooksService, EInvoiceService, EWayBillService],
 })
 export class GstnModule {}

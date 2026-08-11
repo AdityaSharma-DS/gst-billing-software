@@ -3,9 +3,10 @@ import { ConfigModule } from '@nestjs/config';
 import { OrganizationController } from './organization.controller';
 import { OrganizationService } from './organization.service';
 import { MailService } from '../bills/mail.service';
+import { GstnModule } from '../gstn/gstn.module';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, GstnModule],
   controllers: [OrganizationController],
   providers: [OrganizationService, MailService],
 })

@@ -18,6 +18,12 @@ export class OrganizationController {
     return this.mail.verify();
   }
 
+  @Post('verify-gsp')
+  @Roles('ADMIN')
+  verifyGsp(@CurrentTenant() tenantId: string) {
+    return this.org.testGsp(tenantId);
+  }
+
   @Get()
   get(@CurrentTenant() tenantId: string) {
     return this.org.get(tenantId);

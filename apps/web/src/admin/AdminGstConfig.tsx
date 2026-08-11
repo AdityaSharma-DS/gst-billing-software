@@ -33,39 +33,54 @@ export function AdminGstConfig() {
       </div>
 
       <div className="card">
-        <h3 className="card-title">Environment</h3>
-        <div className="seg-row">
+        <h3 className="card-title">GSP Account — WhiteBooks</h3>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          WhiteBooks (developer.whitebooks.in) is the GST Suvidha Provider. One Client ID/Secret pair covers
+          e-Invoice, e-Way Bill, GSTR filing, GSTR-2B and Payment APIs. The GSP wraps NIC's encryption, so the
+          app sends plain JSON. Each taxpayer's own NIC username/password is entered per-organisation under
+          Settings → GST APIs.
+        </p>
+        <div className="seg-row" style={{ marginTop: 4 }}>
           {['sandbox', 'production'].map((env) => (
             <button key={env} className={`seg ${form.environment === env ? 'seg--active' : ''}`} onClick={() => set('environment', env)}>{env[0].toUpperCase() + env.slice(1)}</button>
           ))}
         </div>
-        <p className="muted small" style={{ marginTop: 8 }}>Token TTL: 1 hour on sandbox, 6 hours on production (NIC). Credentials here are used by the e-Invoice, e-Way Bill and GSTR filing integrations.</p>
+        <p className="muted small" style={{ marginTop: 8 }}>
+          Token TTL: 1 hour (sandbox) / 6 hours (production). Use the <b>sandbox</b> credentials (Client ID starts
+          with <code>GSTS…</code>) for testing against the NIC sandbox GSTINs; switch to <b>production</b>
+          (<code>GSTP…</code>) only when going live.
+        </p>
       </div>
 
       <div className="card">
-        <h3 className="card-title">e-Invoice (IRP / NIC)</h3>
+        <h3 className="card-title">Credentials</h3>
         <div className="form-grid form-grid--2">
-          <label className="span2">Base URL<input value={form.einvoiceBaseUrl ?? ''} onChange={(e) => set('einvoiceBaseUrl', e.target.value)} placeholder="https://einv-apisandbox.nic.in" /></label>
-          <label>Client ID<input value={form.einvoiceClientId ?? ''} onChange={(e) => set('einvoiceClientId', e.target.value)} /></label>
-          <label>Client Secret<input type="password" value={form.einvoiceClientSecret ?? ''} onChange={(e) => set('einvoiceClientSecret', e.target.value)} /></label>
+          <label className="span2">API Base URL
+            <input value={form.baseUrl ?? ''} onChange={(e) => set('baseUrl', e.target.value)} placeholder="https://api.whitebooks.in" />
+          </label>
+          <label>Account Email
+            <input value={form.email ?? ''} onChange={(e) => set('email', e.target.value)} placeholder="WhiteBooks account email" />
+          </label>
+          <label>Whitelisted IP Address
+            <input value={form.ipAddress ?? ''} onChange={(e) => set('ipAddress', e.target.value)} placeholder="public IP registered with NIC" />
+          </label>
+          <label>Client ID
+            <input value={form.clientId ?? ''} onChange={(e) => set('clientId', e.target.value)} placeholder="GSTS… (sandbox) / GSTP… (production)" />
+          </label>
+          <label>Client Secret
+            <input type="password" value={form.clientSecret ?? ''} onChange={(e) => set('clientSecret', e.target.value)} placeholder={form.clientSecretSet ? 'unchanged — leave to keep' : ''} />
+          </label>
         </div>
+        <p className="muted small" style={{ marginTop: 8 }}>
+          The client secret is stored server-side and never sent back to this screen. Leave it as the masked
+          value to keep the saved secret.
+        </p>
       </div>
 
       <div className="card">
-        <h3 className="card-title">e-Way Bill</h3>
+        <h3 className="card-title">Tax Rates (optional)</h3>
         <div className="form-grid form-grid--2">
-          <label className="span2">Base URL<input value={form.ewaybillBaseUrl ?? ''} onChange={(e) => set('ewaybillBaseUrl', e.target.value)} /></label>
-          <label>Client ID<input value={form.ewaybillClientId ?? ''} onChange={(e) => set('ewaybillClientId', e.target.value)} /></label>
-          <label>Client Secret<input type="password" value={form.ewaybillClientSecret ?? ''} onChange={(e) => set('ewaybillClientSecret', e.target.value)} /></label>
-        </div>
-      </div>
-
-      <div className="card">
-        <h3 className="card-title">GSTN (returns filing) &amp; Tax Rates</h3>
-        <div className="form-grid form-grid--2">
-          <label>GSTN Base URL<input value={form.gstnBaseUrl ?? ''} onChange={(e) => set('gstnBaseUrl', e.target.value)} /></label>
-          <label>GSTN API Key<input type="password" value={form.gstnApiKey ?? ''} onChange={(e) => set('gstnApiKey', e.target.value)} /></label>
-          <label>FastGST URL (tax rates)<input value={form.fastGstUrl ?? ''} onChange={(e) => set('fastGstUrl', e.target.value)} /></label>
+          <label>FastGST URL<input value={form.fastGstUrl ?? ''} onChange={(e) => set('fastGstUrl', e.target.value)} /></label>
           <label>FastGST API Key<input type="password" value={form.fastGstApiKey ?? ''} onChange={(e) => set('fastGstApiKey', e.target.value)} /></label>
         </div>
       </div>
