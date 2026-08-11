@@ -302,6 +302,60 @@ export class ReturnsService {
     return { payload, errors, summary: { outward: roundObj(outward), itc: roundObj(itc), netPayable: net } };
   }
 
+  /**
+   * GSTR-2B reconciliation — matches an uploaded GSTR-2B (downloaded from the
+   * GSTN portal) against the tenant's purchase records for the period. Auto-fetch
+   * of 2B via the GSP is credential-gated; this manual path needs no credentials.
+   * Match key: supplier GSTIN + supplier invoice number.
+   */
+  async reconcile2b(tenantId: string, period: string, twoB: any) {
+    const { from, to } = monthRange(period);
+    const bills = await this.prisma.withTenant(tenantId, (tx) =>
+      tx.bill.findMany({
+        where: { direction: 'INCOMING', billDate: { gte: from, lt: to }, status: { not: 'CANCELLED' } },
+        include: { party: true },
+      }),
+    );
+    const norm = (v: unknown) => String(v ?? '').trim().toUpperCase().replace(/\s+/g, '');
+    const billTax = (b: any) => Number(b.igstTotal) + Number(b.cgstTotal) + Number(b.sgstTotal) + Number(b.cessTotal);
+    const booksMap = new Map<string, any>();
+    for (const b of bills) booksMap.set(`${norm(b.party?.gstin)}|${norm(b.vendorInvoiceNo)}`, b);
+
+    const twoBInvs = parse2bB2b(twoB);
+    const matched: any[] = [], mismatch: any[] = [], onlyIn2b: any[] = [];
+    const matchedKeys = new Set<string>();
+
+    for (const inv of twoBInvs) {
+      const key = `${norm(inv.ctin)}|${norm(inv.inum)}`;
+      const bill = booksMap.get(key);
+      if (bill) {
+        matchedKeys.add(key);
+        const bTax = billTax(bill);
+        const row = { ctin: inv.ctin, inum: inv.inum, twoBVal: n2(inv.val), twoBTax: n2(inv.tax), bookNo: bill.billNumber, bookVal: Number(bill.grandTotal), bookTax: n2(bTax), taxDiff: n2(bTax - inv.tax) };
+        (Math.abs(bTax - inv.tax) > 1 ? mismatch : matched).push(row);
+      } else {
+        onlyIn2b.push({ ctin: inv.ctin, inum: inv.inum, twoBVal: n2(inv.val), twoBTax: n2(inv.tax) });
+      }
+    }
+    const onlyInBooks = bills
+      .filter((b) => !matchedKeys.has(`${norm(b.party?.gstin)}|${norm(b.vendorInvoiceNo)}`))
+      .map((b) => ({ vendor: b.party?.name ?? '—', gstin: b.party?.gstin ?? null, bookNo: b.billNumber, bookVal: Number(b.grandTotal), bookTax: n2(billTax(b)) }));
+
+    const itc2b = n2(twoBInvs.reduce((s, i) => s + i.tax, 0));
+    const itcBooks = n2(bills.reduce((s, b) => s + billTax(b), 0));
+    const itcMatched = n2(matched.reduce((s, r) => s + r.twoBTax, 0));
+
+    return {
+      period,
+      summary: {
+        total2b: twoBInvs.length, totalBooks: bills.length,
+        matched: matched.length, mismatch: mismatch.length, onlyIn2b: onlyIn2b.length, onlyInBooks: onlyInBooks.length,
+        itc2b, itcBooks, itcMatched, itcAtRisk: n2(itcBooks - itcMatched),
+      },
+      matched, mismatch, onlyIn2b, onlyInBooks,
+    };
+  }
+
   /** Filing status + due dates + late-fee estimate for the compliance dashboard. */
   async compliance(tenantId: string) {
     const returns = await this.prisma.withTenant(tenantId, (tx) => tx.gstReturn.findMany());
@@ -345,6 +399,23 @@ function fyRange(period: string) {
   return { from: new Date(y, 3, 1), to: new Date(y + 1, 3, 1) };
 }
 function roundObj(o: any) { const r: any = {}; for (const k in o) r[k] = n2(o[k]); return r; }
+/** Extract B2B invoices from a GSTN GSTR-2B JSON (defensive across wrappers). */
+function parse2bB2b(twoB: any): { ctin: string; inum: string; val: number; tax: number }[] {
+  const root = twoB?.data?.docdata ?? twoB?.docdata ?? twoB?.data ?? twoB ?? {};
+  const b2b = root.b2b ?? twoB?.b2b ?? [];
+  const out: { ctin: string; inum: string; val: number; tax: number }[] = [];
+  for (const sup of b2b) {
+    const ctin = sup.ctin ?? sup.gstin;
+    for (const inv of (sup.inv ?? [])) {
+      const tax = (inv.itms ?? []).reduce((s: number, it: any) => {
+        const d = it.itm_det ?? it;
+        return s + Number(d.iamt || 0) + Number(d.camt || 0) + Number(d.samt || 0) + Number(d.cesamt || d.csamt || 0);
+      }, 0);
+      out.push({ ctin, inum: inv.inum, val: Number(inv.val || 0), tax });
+    }
+  }
+  return out;
+}
 function sectionCounts(p: any) {
   return { b2b: p.b2b?.length ?? 0, b2cl: p.b2cl?.length ?? 0, b2cs: p.b2cs?.length ?? 0, cdnr: p.cdnr?.length ?? 0, hsn: p.hsn?.data?.length ?? 0 };
 }

@@ -27,6 +27,12 @@ export class ReturnsController {
     return this.returns.generate(tenantId, body.returnType, body.period);
   }
 
+  @Post('reconcile-2b')
+  @Roles('ADMIN', 'ACCOUNTANT')
+  reconcile2b(@CurrentTenant() tenantId: string, @Body() body: { period: string; gstr2b: any }) {
+    return this.returns.reconcile2b(tenantId, body.period, body.gstr2b);
+  }
+
   @Get(':id/json')
   async json(@CurrentTenant() tenantId: string, @Param('id') id: string, @Res() res: Response) {
     const { filename, json } = await this.returns.json(tenantId, id);

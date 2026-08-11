@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { toast } from '../components/Toaster';
 
-type MainTab = 'GSTR-1' | 'GSTR-3B' | 'GSTR-4' | 'GSTR-9' | 'GSTR-3B Reconciliation' | 'TDS/TCS Report';
+type MainTab = 'GSTR-1' | 'GSTR-3B' | 'GSTR-4' | 'GSTR-9' | 'GSTR-2B Reconciliation' | 'TDS/TCS Report';
 type SubTab = 'B2B' | 'B2CL' | 'B2CS' | 'CDNR' | 'HSN';
 
 // Composition (GSTR-4) uses quarters. Q1=Apr-Jun … Q4=Jan-Mar.
@@ -40,6 +40,7 @@ export function Returns() {
 
   const isGstr4 = tab === 'GSTR-4';
   const isGstr9 = tab === 'GSTR-9';
+  const isGeneratable = tab === 'GSTR-1' || tab === 'GSTR-3B' || tab === 'GSTR-4' || tab === 'GSTR-9';
   // Latest generated return for the current tab + period.
   const rtype = tab === 'GSTR-3B' ? 'GSTR3B' : tab === 'GSTR-4' ? 'GSTR4' : tab === 'GSTR-9' ? 'GSTR9' : 'GSTR1';
   const current = useMemo(() => returns.filter((r) => r.returnType === rtype && r.period === period).sort((a, b) => b.version - a.version)[0], [returns, rtype, period]);
@@ -80,17 +81,19 @@ export function Returns() {
         </div>
       </div>
 
-      <div className="stat-grid stat-grid--4">
-        <div className="stat-card"><div className="stat-label">Taxable Value</div><div className="stat-value">{current && taxableVal != null ? inr(taxableVal) : '—'}</div></div>
-        <div className="stat-card"><div className="stat-label">Total Tax</div><div className="stat-value">{current ? inr(totalTax) : '—'}</div></div>
-        <div className="stat-card"><div className="stat-label">Net Payable</div><div className="stat-value">{current ? inr(netPayable) : '—'}</div></div>
-        <div className="stat-card"><div className="stat-label">Status</div><div className="stat-value" style={{ fontSize: 18 }}>{current ? current.status : 'Not generated'}</div></div>
-      </div>
+      {isGeneratable && (
+        <div className="stat-grid stat-grid--4">
+          <div className="stat-card"><div className="stat-label">Taxable Value</div><div className="stat-value">{current && taxableVal != null ? inr(taxableVal) : '—'}</div></div>
+          <div className="stat-card"><div className="stat-label">Total Tax</div><div className="stat-value">{current ? inr(totalTax) : '—'}</div></div>
+          <div className="stat-card"><div className="stat-label">Net Payable</div><div className="stat-value">{current ? inr(netPayable) : '—'}</div></div>
+          <div className="stat-card"><div className="stat-label">Status</div><div className="stat-value" style={{ fontSize: 18 }}>{current ? current.status : 'Not generated'}</div></div>
+        </div>
+      )}
 
       <div className="card">
         <div className="tabs tabs--between">
           <div className="tabs-group">
-            {(['GSTR-1', 'GSTR-3B', 'GSTR-4', 'GSTR-9', 'GSTR-3B Reconciliation', 'TDS/TCS Report'] as MainTab[]).map((t) => (
+            {(['GSTR-1', 'GSTR-3B', 'GSTR-4', 'GSTR-9', 'GSTR-2B Reconciliation', 'TDS/TCS Report'] as MainTab[]).map((t) => (
               <button key={t} className={`tab ${tab === t ? 'tab--active' : ''}`}
                 onClick={() => {
                   setTab(t);
@@ -100,12 +103,14 @@ export function Returns() {
                 }}>{t}</button>
             ))}
           </div>
-          <div className="tabs-actions">
-            <button className="btn-ghost" disabled={generate.isPending} onClick={() => generate.mutate()}>{generate.isPending ? 'Generating…' : 'Generate'}</button>
-            {current && <button className="btn-ghost" onClick={() => downloadJson(current.id)}>Download JSON</button>}
-            {current && current.status !== 'FILED' && <button className="btn-primary" onClick={() => markFiled.mutate(current.id)}>Mark Filed</button>}
-            {current?.status === 'FILED' && <span className="badge badge--finalized">Filed · {current.arn}</span>}
-          </div>
+          {isGeneratable && (
+            <div className="tabs-actions">
+              <button className="btn-ghost" disabled={generate.isPending} onClick={() => generate.mutate()}>{generate.isPending ? 'Generating…' : 'Generate'}</button>
+              {current && <button className="btn-ghost" onClick={() => downloadJson(current.id)}>Download JSON</button>}
+              {current && current.status !== 'FILED' && <button className="btn-primary" onClick={() => markFiled.mutate(current.id)}>Mark Filed</button>}
+              {current?.status === 'FILED' && <span className="badge badge--finalized">Filed · {current.arn}</span>}
+            </div>
+          )}
         </div>
 
         {current?.status === 'ERROR' && (
@@ -113,7 +118,7 @@ export function Returns() {
             {current.validationErrors?.length} validation issue(s): {current.validationErrors?.slice(0, 3).map((e: any) => e.message).join('; ')}
           </div>
         )}
-        {!current && <p className="muted small">No {rtype} generated for {period}. Click <b>Generate</b>.</p>}
+        {isGeneratable && !current && <p className="muted small">No {rtype} generated for {period}. Click <b>Generate</b>.</p>}
 
         {tab === 'GSTR-1' && current && (
           <Gstr1Sections id={current.id} sub={sub} setSub={setSub} />
@@ -159,7 +164,7 @@ export function Returns() {
         )}
         {tab === 'GSTR-9' && !current && <p className="muted small">Annual consolidated return. Select a financial year and <b>Generate</b>.</p>}
 
-        {tab === 'GSTR-3B Reconciliation' && <div className="empty-state"><p className="muted">GSTR-2B vs purchase reconciliation — needs GSTN 2B download (credential-gated).</p></div>}
+        {tab === 'GSTR-2B Reconciliation' && <Reconcile2b period={period} />}
         {tab === 'TDS/TCS Report' && <div className="empty-state"><p className="muted">TDS (GSTR-7) and TCS (GSTR-8) — coming next.</p></div>}
       </div>
 
@@ -184,6 +189,82 @@ export function Returns() {
         </table>
       </div>
     </section>
+  );
+}
+
+/** GSTR-2B reconciliation — upload the portal 2B JSON, match against purchases. */
+function Reconcile2b({ period }: { period: string }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [report, setReport] = useState<any>(null);
+  const [view, setView] = useState<'mismatch' | 'onlyIn2b' | 'onlyInBooks'>('mismatch');
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
+    setBusy(true);
+    try {
+      const gstr2b = JSON.parse(await file.text());
+      const { data } = await api.post('/returns/reconcile-2b', { period, gstr2b });
+      setReport(data); setView('mismatch');
+      toast(`Reconciled: ${data.summary.matched} matched, ${data.summary.mismatch} mismatched`);
+    } catch { toast('Invalid GSTR-2B JSON or reconciliation failed', 'error'); }
+    finally { setBusy(false); if (fileRef.current) fileRef.current.value = ''; }
+  }
+
+  const s = report?.summary;
+  return (
+    <>
+      <div className="filter-bar">
+        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={onFile} />
+        <button className="btn-primary" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? 'Reconciling…' : 'Upload GSTR-2B JSON'}</button>
+        <span className="muted small">Download GSTR-2B for {period} from the GST portal, then upload it here to match against your purchase records.</span>
+      </div>
+
+      {!report && <p className="muted small">No reconciliation yet — upload a GSTR-2B JSON to compare it against purchases for {period}.</p>}
+
+      {report && (<>
+        <div className="stat-grid stat-grid--4" style={{ marginBottom: 16 }}>
+          <div className="stat-card"><div className="stat-label">Matched</div><div className="stat-value pos">{s.matched}</div></div>
+          <div className="stat-card"><div className="stat-label">Mismatched</div><div className="stat-value">{s.mismatch}</div></div>
+          <div className="stat-card"><div className="stat-label">In 2B, not in books</div><div className="stat-value">{s.onlyIn2b}</div></div>
+          <div className="stat-card"><div className="stat-label">ITC at risk</div><div className="stat-value neg">{inr(s.itcAtRisk)}</div></div>
+        </div>
+
+        <div className="subtabs">
+          {([['mismatch', `Mismatches (${s.mismatch})`], ['onlyIn2b', `Only in 2B (${s.onlyIn2b})`], ['onlyInBooks', `Only in books (${s.onlyInBooks})`]] as const).map(([k, label]) => (
+            <button key={k} className={`subtab ${view === k ? 'subtab--active' : ''}`} onClick={() => setView(k)}>{label}</button>
+          ))}
+        </div>
+
+        {view === 'mismatch' && (
+          <table className="data-table compact">
+            <thead><tr><th>Supplier GSTIN</th><th>Invoice</th><th className="num">2B Tax</th><th>Book Bill</th><th className="num">Book Tax</th><th className="num">Diff</th></tr></thead>
+            <tbody>
+              {report.mismatch.map((r: any, i: number) => <tr key={i}><td className="mono">{r.ctin}</td><td>{r.inum}</td><td className="num">{inr(r.twoBTax)}</td><td>{r.bookNo}</td><td className="num">{inr(r.bookTax)}</td><td className="num"><span className="neg">{inr(r.taxDiff)}</span></td></tr>)}
+              {report.mismatch.length === 0 && <tr><td colSpan={6} className="muted">No tax mismatches — matched invoices agree with 2B. 🎉</td></tr>}
+            </tbody>
+          </table>
+        )}
+        {view === 'onlyIn2b' && (
+          <table className="data-table compact">
+            <thead><tr><th>Supplier GSTIN</th><th>Invoice</th><th className="num">2B Value</th><th className="num">2B Tax</th></tr></thead>
+            <tbody>
+              {report.onlyIn2b.map((r: any, i: number) => <tr key={i}><td className="mono">{r.ctin}</td><td>{r.inum}</td><td className="num">{inr(r.twoBVal)}</td><td className="num">{inr(r.twoBTax)}</td></tr>)}
+              {report.onlyIn2b.length === 0 && <tr><td colSpan={4} className="muted">Every 2B invoice is recorded in your books.</td></tr>}
+            </tbody>
+          </table>
+        )}
+        {view === 'onlyInBooks' && (
+          <table className="data-table compact">
+            <thead><tr><th>Vendor</th><th>GSTIN</th><th>Book Bill</th><th className="num">Value</th><th className="num">Tax (ITC at risk)</th></tr></thead>
+            <tbody>
+              {report.onlyInBooks.map((r: any, i: number) => <tr key={i}><td className="cell-strong">{r.vendor}</td><td className="mono muted">{r.gstin ?? '—'}</td><td>{r.bookNo}</td><td className="num">{inr(r.bookVal)}</td><td className="num"><span className="neg">{inr(r.bookTax)}</span></td></tr>)}
+              {report.onlyInBooks.length === 0 && <tr><td colSpan={5} className="muted">All purchases appear in GSTR-2B — full ITC support.</td></tr>}
+            </tbody>
+          </table>
+        )}
+      </>)}
+    </>
   );
 }
 
