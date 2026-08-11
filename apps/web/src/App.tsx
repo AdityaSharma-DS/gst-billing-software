@@ -13,7 +13,9 @@ import { ImportBills } from './pages/ImportBills';
 import { Reports } from './pages/Reports';
 import { Receipts } from './pages/Receipts';
 import { Returns } from './pages/Returns';
+import { Compliance } from './pages/Compliance';
 import { Settings } from './pages/Settings';
+import { Billing } from './pages/Billing';
 import { Login } from './pages/Login';
 import { Placeholder } from './pages/Placeholder';
 import { Toaster } from './components/Toaster';
@@ -71,7 +73,9 @@ export default function App() {
         <Route path="reports" element={<Reports />} />
         <Route path="eway" element={<EwayBills />} />
         <Route path="returns" element={<Returns />} />
+        <Route path="compliance" element={<Compliance />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="billing" element={<Billing />} />
       </Route>
     </Routes>
     </>
