@@ -38,6 +38,7 @@ DECLARE
     'payments',
     'products',
     'expenses',
+    'recurring_profiles',
     'bill_payments',
     'audit_logs'
   ];

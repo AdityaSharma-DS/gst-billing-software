@@ -143,6 +143,7 @@ model Party {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bills  Bill[]
+  recurring RecurringProfile[]
 
   @@index([tenantId, type])
   @@index([tenantId, gstin])
@@ -323,6 +324,27 @@ model Expense {
   @@index([tenantId, date])
   @@index([tenantId, category])
   @@map("expenses")
+}
+
+model RecurringProfile {
+  id          String    @id @default(uuid())
+  tenantId    String
+  partyId     String?
+  description String?
+  invoiceType String    @default("TAX")
+  frequency   String    @default("MONTHLY") // MONTHLY | QUARTERLY | YEARLY
+  nextRunDate DateTime
+  paymentMode String?
+  active      Boolean   @default(true)
+  items       Json      // [{ description, hsnSacCode?, quantity, rate, gstRate }]
+  lastRunAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  party Party? @relation(fields: [partyId], references: [id])
+
+  @@index([tenantId, nextRunDate])
+  @@map("recurring_profiles")
 }
 
 /// Payments recorded against a bill (supports partial payments).

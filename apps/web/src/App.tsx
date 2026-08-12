@@ -17,8 +17,8 @@ import { Compliance } from './pages/Compliance';
 import { Settings } from './pages/Settings';
 import { Billing } from './pages/Billing';
 import { Expenses } from './pages/Expenses';
+import { Recurring } from './pages/Recurring';
 import { Login } from './pages/Login';
-import { Placeholder } from './pages/Placeholder';
 import { Toaster } from './components/Toaster';
 import { isAdminAuthed } from './admin/adminApi';
 import { AdminLogin } from './admin/AdminLogin';
@@ -68,7 +68,7 @@ export default function App() {
         <Route path="purchases/import" element={<ImportBills />} />
         <Route path="purchases/:id/edit" element={<BillForm />} />
 
-        <Route path="recurring" element={<Placeholder title="Recurring Clients" note="Recurring billing schedules and add-recurring modal." />} />
+        <Route path="recurring" element={<Recurring />} />
         <Route path="expenses" element={<Expenses />} />
         <Route path="receipts" element={<Receipts />} />
         <Route path="reports" element={<Reports />} />
