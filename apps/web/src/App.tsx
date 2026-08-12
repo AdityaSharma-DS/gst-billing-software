@@ -16,6 +16,7 @@ import { Returns } from './pages/Returns';
 import { Compliance } from './pages/Compliance';
 import { Settings } from './pages/Settings';
 import { Billing } from './pages/Billing';
+import { Expenses } from './pages/Expenses';
 import { Login } from './pages/Login';
 import { Placeholder } from './pages/Placeholder';
 import { Toaster } from './components/Toaster';
@@ -68,7 +69,7 @@ export default function App() {
         <Route path="purchases/:id/edit" element={<BillForm />} />
 
         <Route path="recurring" element={<Placeholder title="Recurring Clients" note="Recurring billing schedules and add-recurring modal." />} />
-        <Route path="expenses" element={<Placeholder title="Expenses" note="Expense tracking with categories and add-expense modal." />} />
+        <Route path="expenses" element={<Expenses />} />
         <Route path="receipts" element={<Receipts />} />
         <Route path="reports" element={<Reports />} />
         <Route path="eway" element={<EwayBills />} />

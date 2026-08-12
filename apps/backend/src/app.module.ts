@@ -15,6 +15,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { OrganizationModule } from './modules/organization/organization.module';
 import { ProductsModule } from './modules/products/products.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
 import { UsersModule } from './modules/users/users.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { StorageModule } from './common/storage/storage.module';
@@ -37,6 +38,7 @@ import { StorageModule } from './common/storage/storage.module';
     ReportsModule,
     OrganizationModule,
     ProductsModule,
+    ExpensesModule,
     UsersModule,
     PlatformModule,
   ],

@@ -37,6 +37,7 @@ DECLARE
     'eway_bills',
     'payments',
     'products',
+    'expenses',
     'bill_payments',
     'audit_logs'
   ];

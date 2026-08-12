@@ -303,6 +303,28 @@ model Product {
   @@map("products")
 }
 
+model Expense {
+  id            String   @id @default(uuid())
+  tenantId      String
+  date          DateTime @default(now())
+  category      String?
+  description   String
+  amount        Decimal  @default(0) @db.Decimal(14, 2)
+  gstAmount     Decimal  @default(0) @db.Decimal(14, 2)
+  businessName  String?
+  businessGstin String?
+  invoiceBillNo String?
+  paymentMode   String?  // Cash / Bank / UPI / Card / Cheque
+  note          String?
+  status        String   @default("UNPAID") // PAID | UNPAID
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, date])
+  @@index([tenantId, category])
+  @@map("expenses")
+}
+
 /// Payments recorded against a bill (supports partial payments).
 model BillPayment {
   id        String   @id @default(uuid())
