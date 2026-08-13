@@ -5,8 +5,9 @@
    See design/design-system.md for provenance.
    ───────────────────────────────────────────────────────────────────────── */
 :root {
-  /* Typography (Inter — from the design HTML) */
+  /* Typography — Inter for UI/body, Poppins for display headings (matches the DONICY logo) */
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Poppins', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;

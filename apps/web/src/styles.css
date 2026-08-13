@@ -4,6 +4,9 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); font-size: 14px; }
 a { color: var(--color-primary); cursor: pointer; text-decoration: none; }
+/* Poppins display headings (matches the DONICY logo), Inter for everything else */
+h1, h2, h3, h4, .card-title, .section-label, .stat-value, .auth-card h1,
+.total-bar-amount strong, .success-amt, .price-name, .quick-num { font-family: var(--font-display); letter-spacing: -0.01em; }
 .muted { color: var(--color-text-muted); }
 .small { font-size: 12px; }
 .center { text-align: center; }
