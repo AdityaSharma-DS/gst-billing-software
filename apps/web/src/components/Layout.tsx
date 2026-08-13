@@ -2,10 +2,11 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, logout } from '../lib/api';
 import { Logo } from './Logo';
+import { NotificationsBell } from './NotificationsBell';
 import {
   IconDashboard, IconClients, IconPlus, IconRecurring, IconExpenses,
   IconPurchases, IconReceipts, IconReports, IconReturns, IconSettings,
-  IconSearch, IconBell, IconBox,
+  IconSearch, IconBox,
 } from './icons';
 
 const nav = [
@@ -79,7 +80,7 @@ export function Layout() {
             <IconSearch size={18} />
             <input placeholder="Search" />
           </div>
-          <button className="icon-btn" aria-label="Notifications"><IconBell size={20} /></button>
+          <NotificationsBell />
           <button className="btn-ghost" onClick={logout}>Logout</button>
         </header>
         <main className="content">

@@ -5,5 +5,6 @@ import { ReturnsService } from './returns.service';
 @Module({
   controllers: [ReturnsController],
   providers: [ReturnsService],
+  exports: [ReturnsService],
 })
 export class ReturnsModule {}

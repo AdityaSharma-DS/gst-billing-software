@@ -17,6 +17,7 @@ import { OrganizationModule } from './modules/organization/organization.module';
 import { ProductsModule } from './modules/products/products.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { RecurringModule } from './modules/recurring/recurring.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { UsersModule } from './modules/users/users.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { StorageModule } from './common/storage/storage.module';
@@ -41,6 +42,7 @@ import { StorageModule } from './common/storage/storage.module';
     ProductsModule,
     ExpensesModule,
     RecurringModule,
+    NotificationsModule,
     UsersModule,
     PlatformModule,
   ],
