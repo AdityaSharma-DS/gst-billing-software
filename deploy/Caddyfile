@@ -1,0 +1,37 @@
+# ── DONICY reverse proxy + automatic HTTPS ─────────────────────────────
+# Caddy fetches & renews Let's Encrypt certs automatically once DNS points
+# at this server and ports 80/443 are open. Replace the domains + email.
+#
+#   sudo caddy run --config /etc/caddy/Caddyfile      (or: systemctl restart caddy)
+
+{
+	email admin@donicy.in           # for Let's Encrypt notifications
+}
+
+# ── Marketing site → apps/landing (static) ──
+donicy.in, www.donicy.in {
+	root * /var/www/donicy/landing
+	encode gzip
+	file_server
+	try_files {path} /index.html
+}
+
+# ── App (SPA) + API, same origin so the web app's `/api` calls just work ──
+app.donicy.in {
+	encode gzip
+
+	# API + uploaded files proxied to the NestJS service on :4000
+	handle /api/* {
+		reverse_proxy 127.0.0.1:4000
+	}
+	handle /uploads/* {
+		reverse_proxy 127.0.0.1:4000
+	}
+
+	# Everything else = the built React SPA with client-side routing fallback
+	handle {
+		root * /var/www/donicy/web
+		try_files {path} /index.html
+		file_server
+	}
+}
