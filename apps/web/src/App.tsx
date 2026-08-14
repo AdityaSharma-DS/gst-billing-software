@@ -19,6 +19,7 @@ import { Billing } from './pages/Billing';
 import { Expenses } from './pages/Expenses';
 import { Recurring } from './pages/Recurring';
 import { Login } from './pages/Login';
+import { Register } from './pages/Register';
 import { Toaster } from './components/Toaster';
 import { isAdminAuthed } from './admin/adminApi';
 import { AdminLogin } from './admin/AdminLogin';
@@ -42,6 +43,7 @@ export default function App() {
     <Toaster />
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
       {/* Master admin panel (platform operator) */}
       <Route path="/admin/login" element={<AdminLogin />} />
