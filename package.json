@@ -12,6 +12,7 @@
     "dev:backend": "npm --workspace apps/backend run start:dev",
     "dev:web": "npm --workspace apps/web run dev",
     "build": "npm --workspace apps/backend run build && npm --workspace apps/web run build",
+    "vercel-build": "npm run prisma:generate && npm --workspace apps/backend run build && npm --workspace apps/web run build",
     "prisma:generate": "npm --workspace apps/backend run prisma:generate",
     "prisma:migrate": "npm --workspace apps/backend run prisma:migrate"
   },
