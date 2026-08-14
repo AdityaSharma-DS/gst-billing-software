@@ -680,7 +680,9 @@
 
 <script>
   (function(){
-    var SIGNUP_URL='https://app.donicy.in/signup'; // <-- change this to your live signup URL
+    var SIGNUP_URL = (location.hostname==='localhost'||location.hostname==='127.0.0.1')
+      ? 'http://localhost:5173/register'          // local testing → the running app
+      : 'https://app.donicy.in/signup';           // <-- change to your live signup URL
     document.querySelectorAll('.js-signup').forEach(function(a){ a.setAttribute('href',SIGNUP_URL); });
   })();
   (function(){
