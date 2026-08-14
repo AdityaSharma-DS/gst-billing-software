@@ -14,11 +14,11 @@ export class PlatformService {
 
   // ── Auth ──
   async login(email: string, password: string) {
-    const admin = await this.prisma.platformAdmin.findUnique({ where: { email: email.trim().toLowerCase() } });
+    const admin = await this.prisma.admin.platformAdmin.findUnique({ where: { email: email.trim().toLowerCase() } });
     if (!admin || !admin.isActive) throw new UnauthorizedException('Invalid credentials');
     const ok = await bcrypt.compare(password, admin.passwordHash);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
-    await this.prisma.platformAdmin.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
+    await this.prisma.admin.platformAdmin.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
     return {
       accessToken: await this.jwt.signAsync({ sub: admin.id, email: admin.email, scope: 'platform' }, { expiresIn: '8h' }),
       admin: { id: admin.id, email: admin.email, fullName: admin.fullName },
@@ -28,11 +28,11 @@ export class PlatformService {
   // ── Overview ──
   async overview() {
     const [tenants, active, suspended, subs, plans] = await Promise.all([
-      this.prisma.tenant.count(),
-      this.prisma.tenant.count({ where: { status: 'ACTIVE' } }),
-      this.prisma.tenant.count({ where: { status: 'SUSPENDED' } }),
-      this.prisma.subscription.findMany({ include: { plan: true }, where: { status: { in: ['ACTIVE', 'TRIALING'] } } }),
-      this.prisma.plan.count({ where: { isActive: true } }),
+      this.prisma.admin.tenant.count(),
+      this.prisma.admin.tenant.count({ where: { status: 'ACTIVE' } }),
+      this.prisma.admin.tenant.count({ where: { status: 'SUSPENDED' } }),
+      this.prisma.admin.subscription.findMany({ include: { plan: true }, where: { status: { in: ['ACTIVE', 'TRIALING'] } } }),
+      this.prisma.admin.plan.count({ where: { isActive: true } }),
     ]);
     // Monthly recurring revenue normalized to months.
     const mrr = subs.reduce((s, x) => {
@@ -44,7 +44,7 @@ export class PlatformService {
 
   // ── Tenants / licenses ──
   async tenants() {
-    const list = await this.prisma.tenant.findMany({
+    const list = await this.prisma.admin.tenant.findMany({
       orderBy: { createdAt: 'asc' },
       include: {
         organizations: { take: 1 },
@@ -65,14 +65,14 @@ export class PlatformService {
 
   async setTenantStatus(id: string, status: 'ACTIVE' | 'SUSPENDED' | 'CLOSED') {
     if (!['ACTIVE', 'SUSPENDED', 'CLOSED'].includes(status)) throw new BadRequestException('Invalid status');
-    return this.prisma.tenant.update({ where: { id }, data: { status } });
+    return this.prisma.admin.tenant.update({ where: { id }, data: { status } });
   }
 
   /** Assign a plan / extend the license. months defaults to the plan interval. */
   async assignSubscription(tenantId: string, planId: string, months?: number) {
-    const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
+    const plan = await this.prisma.admin.plan.findUnique({ where: { id: planId } });
     if (!plan) throw new NotFoundException('Plan not found');
-    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId }, include: { subscription: true } });
+    const tenant = await this.prisma.admin.tenant.findUnique({ where: { id: tenantId }, include: { subscription: true } });
     if (!tenant) throw new NotFoundException('Tenant not found');
 
     const span = months ?? (plan.interval === 'YEARLY' ? 12 : plan.interval === 'QUARTERLY' ? 3 : 1);
@@ -81,7 +81,7 @@ export class PlatformService {
       ? tenant.subscription.currentPeriodEnd : new Date();
     const end = new Date(base); end.setMonth(end.getMonth() + span);
 
-    return this.prisma.subscription.upsert({
+    return this.prisma.admin.subscription.upsert({
       where: { tenantId },
       create: { tenantId, planId, status: 'ACTIVE', currentPeriodStart: new Date(), currentPeriodEnd: end },
       update: { planId, status: 'ACTIVE', currentPeriodEnd: end },
@@ -91,7 +91,7 @@ export class PlatformService {
 
   // ── Plans ──
   listPlans() {
-    return this.prisma.plan.findMany({ orderBy: { priceInr: 'asc' } });
+    return this.prisma.admin.plan.findMany({ orderBy: { priceInr: 'asc' } });
   }
 
   savePlan(data: { id?: string; name: string; interval: 'MONTHLY' | 'QUARTERLY' | 'YEARLY'; priceInr: number; trialDays?: number; limits?: any; isActive?: boolean }) {
@@ -101,13 +101,13 @@ export class PlatformService {
       trialDays: data.trialDays ?? 0, limits: data.limits ?? undefined, isActive: data.isActive ?? true,
     };
     return data.id
-      ? this.prisma.plan.update({ where: { id: data.id }, data: payload })
-      : this.prisma.plan.create({ data: payload });
+      ? this.prisma.admin.plan.update({ where: { id: data.id }, data: payload })
+      : this.prisma.admin.plan.create({ data: payload });
   }
 
   // ── GST API configuration (platform-wide) ──
   async getGstConfig() {
-    const row = await this.prisma.platformSetting.findUnique({ where: { key: GST_CONFIG_KEY } });
+    const row = await this.prisma.admin.platformSetting.findUnique({ where: { key: GST_CONFIG_KEY } });
     const defaults = {
       // WhiteBooks GSP — one Client ID/Secret pair covers e-Invoice, e-Way Bill,
       // GSTR filing, GSTR-2B and Payment APIs.
@@ -135,7 +135,7 @@ export class PlatformService {
     // If the UI sends the masked placeholder, keep the stored secret.
     const merged = { ...existing, ...value };
     if (!value?.clientSecret || value.clientSecret === '********') merged.clientSecret = existing.clientSecret ?? '';
-    await this.prisma.platformSetting.upsert({
+    await this.prisma.admin.platformSetting.upsert({
       where: { key: GST_CONFIG_KEY },
       create: { key: GST_CONFIG_KEY, value: merged },
       update: { value: merged },

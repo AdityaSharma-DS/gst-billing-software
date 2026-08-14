@@ -42,16 +42,29 @@ sudo useradd -r -m -d /var/www/donicy donicy
 sudo mkdir -p /var/www/donicy/{api,web,landing}
 ```
 
-### 2. Database (PostgreSQL, least-privilege role + RLS)
+### 2. Database (PostgreSQL, two roles — RLS-enforced isolation)
+Tenant isolation is enforced by PostgreSQL Row-Level Security, so the app must **not**
+run tenant queries as a superuser (that bypasses RLS). It uses two connections:
+`gst_app` (NOBYPASSRLS) for all tenant data, and a privileged role (`gst_admin`, with
+BYPASSRLS) for migrations and auth/operator lookups.
 ```bash
 sudo -u postgres psql <<'SQL'
 CREATE DATABASE gst_billing;
-CREATE ROLE gst_app LOGIN PASSWORD 'STRONG_PASSWORD' NOSUPERUSER NOBYPASSRLS;
+-- runtime tenant role: RLS applies
+CREATE ROLE gst_app   LOGIN PASSWORD 'STRONG_APP_PASSWORD'   NOSUPERUSER NOBYPASSRLS;
+-- privileged role for migrations + auth/operator (bypasses RLS)
+CREATE ROLE gst_admin LOGIN PASSWORD 'STRONG_ADMIN_PASSWORD' NOSUPERUSER BYPASSRLS;
+GRANT ALL ON DATABASE gst_billing TO gst_admin;
 GRANT USAGE ON SCHEMA public TO gst_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO gst_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO gst_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO gst_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO gst_app;
+REVOKE UPDATE, DELETE ON audit_logs FROM gst_app;   -- keep the audit log append-only
 SQL
 ```
+Run migrations and the RLS SQL (step 4) as `gst_admin`/superuser; the app then serves
+tenant traffic as `gst_app` via `APP_DATABASE_URL`.
 
 ### 3. Build & ship the code
 On your machine (or in CI), from the repo root:
