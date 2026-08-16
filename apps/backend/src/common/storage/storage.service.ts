@@ -16,7 +16,9 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'fs';
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-  readonly root = join(process.cwd(), 'storage');
+  // Serverless filesystems (Vercel) are read-only except /tmp. Local disk
+  // storage there is ephemeral - configure S3_BUCKET for durable documents.
+  readonly root = process.env.VERCEL ? '/tmp/storage' : join(process.cwd(), 'storage');
   private s3: any = null;
   private bucket = '';
 
