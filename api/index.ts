@@ -39,6 +39,19 @@ async function bootstrap(): Promise<express.Express> {
 }
 
 export default async function handler(req: Request, res: Response) {
+  // DB-free liveness probe: proves the serverless function itself loads and runs
+  // without touching NestJS or the database. Lets us tell "function is broken"
+  // apart from "NestJS/DB bootstrap failed".
+  if ((req.url || '').includes('/health')) {
+    res.status(200).json({
+      ok: true,
+      commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'unknown',
+      hasAppDbUrl: !!process.env.APP_DATABASE_URL,
+      hasDbUrl: !!process.env.DATABASE_URL,
+      hasJwt: !!process.env.JWT_SECRET,
+    });
+    return;
+  }
   try {
     const server = await bootstrap();
     return server(req, res);
