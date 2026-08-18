@@ -13,13 +13,16 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { AppModule } = require('../apps/backend/dist/app.module');
-
 let cachedServer: express.Express | null = null;
 
 async function bootstrap(): Promise<express.Express> {
   if (cachedServer) return cachedServer;
+
+  // Required lazily (not at module top-level) so a missing/unbundled compiled
+  // backend surfaces through the handler's try/catch instead of failing the
+  // whole module import as an opaque FUNCTION_INVOCATION_FAILED.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { AppModule } = require('../apps/backend/dist/app.module');
 
   const server = express();
   const app = await NestFactory.create(AppModule, new ExpressAdapter(server), {
