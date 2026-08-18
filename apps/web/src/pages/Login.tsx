@@ -38,7 +38,7 @@ export function Login() {
 
         <div className="auth-row">
           <label className="checkbox"><input type="checkbox" /> Remember me</label>
-          <a className="small">Forgot password?</a>
+          <Link className="small" to="/forgot-password">Forgot password?</Link>
         </div>
 
         {error && <p className="error">{error}</p>}

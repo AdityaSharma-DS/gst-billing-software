@@ -1,7 +1,9 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { MailService } from '../bills/mail.service';
 
 interface RegisterInput {
   businessName: string; fullName: string; email: string; password: string;
@@ -23,6 +25,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly mail: MailService,
   ) {}
 
   /** Self-serve signup: creates a tenant + organization + admin user + 14-day trial. */
@@ -114,6 +117,55 @@ export class AuthService {
       accessToken: await this.jwt.signAsync(payload),
       user: { id: user.id, email: user.email, role: user.role, fullName: user.fullName, tenantId: user.tenantId },
     };
+  }
+
+  /**
+   * Start a password reset. Always returns the same shape whether or not the
+   * email exists (no account enumeration). Emails a one-time link when SMTP is
+   * configured. `baseUrl` is the site origin the reset link should point at.
+   */
+  async requestPasswordReset(email: string, baseUrl: string): Promise<{ ok: true; resetUrl?: string; emailed?: boolean }> {
+    email = email.trim().toLowerCase();
+    const user = await this.prisma.admin.user.findFirst({ where: { email, isActive: true } });
+    if (!user) return { ok: true };
+
+    const raw = crypto.randomBytes(32).toString('hex');
+    const hash = crypto.createHash('sha256').update(raw).digest('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await this.prisma.admin.user.update({
+      where: { id: user.id },
+      data: { resetTokenHash: hash, resetTokenExpiresAt: expires },
+    });
+
+    const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${raw}`;
+    const sent = await this.mail.sendPasswordReset(email, resetUrl).catch(() => ({ sent: false }));
+
+    // When email isn't configured, expose the link for local dev (or when
+    // explicitly opted-in via EXPOSE_RESET_LINK) so the flow is testable.
+    const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+    const expose = !this.mail.isConfigured() && (!isProd || process.env.EXPOSE_RESET_LINK === 'true');
+    if (!sent.sent) {
+      // eslint-disable-next-line no-console
+      console.warn(`[auth] password reset link for ${email}: ${resetUrl}`);
+    }
+    return expose ? { ok: true, resetUrl, emailed: sent.sent } : { ok: true, emailed: sent.sent };
+  }
+
+  /** Complete a password reset using a valid, unexpired, single-use token. */
+  async resetPassword(token: string, newPassword: string): Promise<{ ok: true }> {
+    if (!token || token.length < 32) throw new BadRequestException('Invalid or expired reset link.');
+    if ((newPassword ?? '').length < 6) throw new BadRequestException('Password must be at least 6 characters.');
+    const hash = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await this.prisma.admin.user.findFirst({
+      where: { resetTokenHash: hash, resetTokenExpiresAt: { gt: new Date() } },
+    });
+    if (!user) throw new BadRequestException('This reset link is invalid or has expired. Please request a new one.');
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.admin.user.update({
+      where: { id: user.id },
+      data: { passwordHash, resetTokenHash: null, resetTokenExpiresAt: null },
+    });
+    return { ok: true };
   }
 
   static hashPassword(plain: string) {

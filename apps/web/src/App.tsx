@@ -20,6 +20,8 @@ import { Expenses } from './pages/Expenses';
 import { Recurring } from './pages/Recurring';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { Landing } from './pages/Landing';
 import { Toaster } from './components/Toaster';
 import { isAdminAuthed } from './admin/adminApi';
@@ -47,6 +49,8 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Master admin panel (platform operator) */}
       <Route path="/admin/login" element={<AdminLogin />} />
