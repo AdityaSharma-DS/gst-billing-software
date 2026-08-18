@@ -21,6 +21,42 @@ CREATE FUNCTION app_current_tenant() RETURNS text AS $$
   SELECT NULLIF(current_setting('app.current_tenant', true), '');
 $$ LANGUAGE sql STABLE;
 
+-- ── RLS-exempt connection via role MEMBERSHIP (not the BYPASSRLS attribute) ──
+-- The auth/admin connection must read across tenants (email-only login resolves
+-- the tenant from a globally-unique email; signup checks global uniqueness).
+-- On a superuser DB that role would have BYPASSRLS, but managed serverless
+-- Postgres (Neon, Vercel Postgres, Supabase pooled) gives no superuser. Instead
+-- we exempt any member of the `gst_bypass` group role: it is DB-enforced (a role
+-- can't add itself to a group without admin rights, so the least-privilege
+-- runtime role `gst_app` can never escalate) and needs no superuser.
+--
+-- policies.sql is executed by db:deploy over the privileged DATABASE_URL
+-- connection, so CURRENT_USER here is the admin/migration role — we make exactly
+-- that role a bypass member. The runtime role (APP_DATABASE_URL → gst_app) is a
+-- different user and never gains membership, so RLS stays enforced for it.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'gst_bypass') THEN
+    CREATE ROLE gst_bypass NOLOGIN;
+  END IF;
+  EXECUTE format('GRANT gst_bypass TO %I', current_user);
+EXCEPTION WHEN OTHERS THEN
+  -- Never fail the deploy on grant quirks; log and continue (on a superuser DB
+  -- the admin role bypasses RLS anyway).
+  RAISE NOTICE 'gst_bypass setup skipped: %', SQLERRM;
+END $$;
+
+-- True when the current connection's role is exempt from tenant filtering.
+-- Null-safe: if the gst_bypass role does not exist (e.g. it could not be created
+-- on a locked-down provider), this returns false rather than raising — so RLS
+-- stays enforced and queries don't error. Referencing the role by OID via the
+-- pg_roles subquery avoids pg_has_role() throwing on an unknown role name.
+DROP FUNCTION IF EXISTS app_rls_bypass() CASCADE;
+CREATE FUNCTION app_rls_bypass() RETURNS boolean AS $$
+  SELECT COALESCE(
+    (SELECT pg_has_role(current_user, oid, 'MEMBER') FROM pg_roles WHERE rolname = 'gst_bypass'),
+    false);
+$$ LANGUAGE sql STABLE;
+
 -- Apply RLS to every tenant-scoped table.
 DO $$
 DECLARE
@@ -50,16 +86,17 @@ BEGIN
     EXECUTE format('DROP POLICY IF EXISTS tenant_isolation_select ON %I;', t);
     EXECUTE format('DROP POLICY IF EXISTS tenant_isolation_insert ON %I;', t);
 
-    -- SELECT/UPDATE/DELETE limited to the current tenant.
+    -- SELECT/UPDATE/DELETE limited to the current tenant — unless the
+    -- connection is an RLS-exempt bypass member (auth/admin/operator).
     EXECUTE format($f$
       CREATE POLICY tenant_isolation_select ON %I
-        USING ("tenantId" = app_current_tenant());
+        USING ("tenantId" = app_current_tenant() OR app_rls_bypass());
     $f$, t);
 
-    -- INSERT must target the current tenant.
+    -- INSERT must target the current tenant (bypass members may write any).
     EXECUTE format($f$
       CREATE POLICY tenant_isolation_insert ON %I
-        FOR INSERT WITH CHECK ("tenantId" = app_current_tenant());
+        FOR INSERT WITH CHECK ("tenantId" = app_current_tenant() OR app_rls_bypass());
     $f$, t);
   END LOOP;
 END $$;

@@ -13,24 +13,31 @@ the Prisma client, applies migrations **and RLS policies**, then builds both app
 
 ---
 
-## 1. Provision Postgres (with two roles)
+## 1. Provision Postgres + create the runtime role
 
-Use any managed Postgres that gives you a **superuser/owner** connection
-(Neon, Supabase, Railway, RDS…). Vercel Postgres works too. You need **two roles**:
+Use any managed Postgres — **Neon, Vercel Postgres, Supabase, Railway, RDS**.
+**No superuser is required.** Tenant isolation uses two *connections*:
 
-| Role         | Privilege                     | Used for                                  |
-|--------------|-------------------------------|-------------------------------------------|
-| owner/admin  | can create roles, **BYPASSRLS** | migrations + `PrismaService.admin` (auth, operator) |
-| `gst_app`    | **NOBYPASSRLS**, DML only     | every tenant request (RLS-enforced)       |
+| Connection         | Env var            | Role                     | Used for                              |
+|--------------------|--------------------|--------------------------|---------------------------------------|
+| privileged / owner | `DATABASE_URL`     | your DB's default owner  | migrations + auth/operator (RLS-exempt) |
+| runtime            | `APP_DATABASE_URL` | `gst_app` (you create)   | every tenant request (RLS-enforced)   |
 
-Connect as the owner and run once:
+The owner is made **RLS-exempt automatically** by `db:deploy` — it adds the
+owner to a `gst_bypass` group role and the policies exempt that group. This
+replaces the older `BYPASSRLS` requirement, so it works on providers that give
+no superuser (Neon, Vercel Postgres). You only need to create the least-
+privilege runtime role.
+
+After the **first deploy** has created the tables (migrations run as the owner),
+connect **as the owner** (Neon/Vercel Postgres/Supabase all have an SQL console)
+and run once:
 
 ```sql
--- Least-privilege runtime role. NOBYPASSRLS is the whole point.
-CREATE ROLE gst_app WITH LOGIN PASSWORD 'CHANGE_ME_STRONG' NOBYPASSRLS;
+-- Least-privilege runtime role. It is NOT a gst_bypass member, so RLS is
+-- enforced for every query it makes.
+CREATE ROLE gst_app WITH LOGIN PASSWORD 'CHANGE_ME_STRONG' NOSUPERUSER NOBYPASSRLS;
 
--- Let it read/write data but not escape RLS or alter schema.
-GRANT CONNECT ON DATABASE <dbname> TO gst_app;
 GRANT USAGE ON SCHEMA public TO gst_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO gst_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO gst_app;
@@ -42,12 +49,17 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO gst_app;
 ```
 
-> Run this **after** the first `vercel-build` has created the tables (migrations
-> run as the owner). If `gst_app` must exist before the tables, re-run the two
-> `GRANT ... ON ALL TABLES` lines after the first deploy so it can see them.
-> The RLS policies in `prisma/rls/policies.sql` use `FORCE ROW LEVEL SECURITY`,
-> so even the table owner is filtered — only a `BYPASSRLS` role (the admin
-> connection) sees across tenants, by design.
+> The `gst_app` connection string is the same host/database as `DATABASE_URL` —
+> only the **user/password** differ. Append `?sslmode=require` if your provider
+> needs it (most managed ones do). Keep `?schema=public` if your `DATABASE_URL`
+> has it.
+>
+> **Why isolation holds:** the RLS policies allow a row only when
+> `"tenantId" = app.current_tenant` **or** the connection is a `gst_bypass`
+> member. `gst_app` is never a member (it can't add itself — no role-admin
+> rights), so it sees only the tenant set by `withTenant()`, and nothing at all
+> when no tenant is set. Verified: a `gst_app` connection with no tenant context
+> returns **0** rows.
 
 ---
 
