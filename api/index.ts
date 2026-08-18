@@ -36,6 +36,19 @@ async function bootstrap(): Promise<express.Express> {
 }
 
 export default async function handler(req: Request, res: Response) {
-  const server = await bootstrap();
-  return server(req, res);
+  try {
+    const server = await bootstrap();
+    return server(req, res);
+  } catch (err: any) {
+    // Without this, a bootstrap failure surfaces only as Vercel's opaque
+    // FUNCTION_INVOCATION_FAILED. Log the full stack (visible in Vercel logs)
+    // and return the error name/message so the cause is diagnosable.
+    // eslint-disable-next-line no-console
+    console.error('[api] bootstrap failed:', err);
+    res.status(500).json({
+      error: 'bootstrap_failed',
+      name: err?.name ?? 'Error',
+      message: err?.message ?? String(err),
+    });
+  }
 }
