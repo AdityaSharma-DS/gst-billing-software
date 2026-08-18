@@ -30,9 +30,17 @@ export class NotificationsService {
     const now = new Date();
     const items: NotificationItem[] = [];
 
-    // 1) GST returns — overdue or due within 10 days (from the compliance tracker).
+    // Periods (MM-YYYY) in which the tenant actually made outward supplies — we
+    // only nag about GST returns for months with real activity, not every past month.
+    const activePeriods = await this.prisma.withTenant(tenantId, async (tx) => {
+      const bills = await tx.bill.findMany({ where: { direction: 'OUTGOING', status: { not: 'CANCELLED' } }, select: { billDate: true } });
+      return new Set(bills.map((b) => { const d = new Date(b.billDate); return `${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`; }));
+    });
+
+    // 1) GST returns — overdue or due within 10 days, for periods with activity.
     const compliance = await this.returns.compliance(tenantId).catch(() => [] as any[]);
     for (const r of compliance) {
+      if (!activePeriods.has(r.period)) continue;
       const due = new Date(r.dueDate);
       const daysToDue = Math.ceil((due.getTime() - now.getTime()) / DAY);
       if (r.status === 'OVERDUE') {
