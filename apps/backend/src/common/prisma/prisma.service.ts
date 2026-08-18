@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 /**
@@ -19,6 +19,8 @@ import { PrismaClient } from '@prisma/client';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   readonly admin: PrismaClient;
+  private static readonly UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   private static readonly log = new Logger('PrismaService');
 
   constructor() {
@@ -66,8 +68,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
    * Uses a transaction so the SET LOCAL is scoped to these queries.
    */
   async withTenant<T>(tenantId: string, fn: (tx: PrismaClient) => Promise<T>): Promise<T> {
+    
+    // Defence in depth: this comes from a verified JWT claim, but it is
+    // interpolated into a session setting, so validate the shape before it
+    // ever reaches SQL. This previously used $executeRawUnsafe (injectable).
+    if (!PrismaService.UUID_RE.test(tenantId)) {
+      throw new BadRequestException('Invalid tenant context');
+    }
     return this.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe(`SET LOCAL app.current_tenant = '${tenantId}'`);
+      await tx.$executeRaw`SELECT set_config('app.current_tenant', ${tenantId}, true)`;
       return fn(tx as unknown as PrismaClient);
     });
   }
