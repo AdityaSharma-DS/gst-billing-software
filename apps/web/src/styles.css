@@ -109,6 +109,13 @@ button { font-family: var(--font-sans); cursor: pointer; }
 .auth-card label { display: flex; flex-direction: column; gap: var(--space-1); font-size: 11px; letter-spacing: 0.3px; text-transform: uppercase; color: var(--color-text-muted); }
 .auth-card input { padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-sans); font-size: 14px; background: var(--color-surface); }
 .auth-card input:focus { outline: none; border-color: var(--color-primary); }
+
+/* Password field with show/hide toggle */
+.pw-field { position: relative; display: flex; align-items: stretch; }
+.pw-field input { flex: 1; width: 100%; padding-right: 42px; }
+.pw-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; background: none; border: none; border-radius: var(--radius-md); color: var(--color-text-muted); cursor: pointer; }
+.pw-toggle:hover { color: var(--color-text); background: var(--color-surface-alt, rgba(0,0,0,0.04)); }
+.pw-toggle:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
 .auth-row { display: flex; align-items: center; justify-content: space-between; }
 .auth-card label.checkbox, .checkbox { flex-direction: row !important; align-items: center; gap: var(--space-2); text-transform: none; letter-spacing: normal; font-size: 12px; }
 .auth-row a { text-decoration: underline; }

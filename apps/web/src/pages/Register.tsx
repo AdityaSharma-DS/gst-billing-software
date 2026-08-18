@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Logo } from '../components/Logo';
+import { PasswordInput } from '../components/PasswordInput';
 import { isValidGstin } from '../lib/gstin';
 
 export function Register() {
@@ -49,7 +50,7 @@ export function Register() {
         <label>Business Name<input autoFocus placeholder="e.g. Sharma Traders" value={form.businessName} onChange={(e) => set('businessName', e.target.value)} /></label>
         <label>Your Name<input placeholder="Full name" value={form.fullName} onChange={(e) => set('fullName', e.target.value)} /></label>
         <label>Email<input type="email" placeholder="you@business.com" value={form.email} onChange={(e) => set('email', e.target.value)} /></label>
-        <label>Password<input type="password" placeholder="At least 6 characters" value={form.password} onChange={(e) => set('password', e.target.value)} /></label>
+        <label>Password<PasswordInput placeholder="At least 6 characters" value={form.password} onChange={(v) => set('password', v)} autoComplete="new-password" /></label>
         <label>GSTIN <span className="muted small">(optional — add later in Settings)</span><input placeholder="27ABCDE1234F1Z5" value={form.gstin} onChange={(e) => set('gstin', e.target.value.toUpperCase())} /></label>
 
         {error && <p className="error">{error}</p>}

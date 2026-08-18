@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Logo } from '../components/Logo';
+import { PasswordInput } from '../components/PasswordInput';
 
 export function Login() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export function Login() {
         <p className="muted small">Don't have an account? <Link to="/register">Create one</Link></p>
 
         <label>Email<input type="email" placeholder="you@business.com" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-        <label>Password<input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+        <label>Password<PasswordInput placeholder="Password" value={password} onChange={setPassword} autoComplete="current-password" /></label>
 
         <div className="auth-row">
           <label className="checkbox"><input type="checkbox" /> Remember me</label>
