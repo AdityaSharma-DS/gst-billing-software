@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 /**
@@ -10,16 +10,45 @@ import { PrismaClient } from '@prisma/client';
  *    cross-tenant operator work and for auth lookups that happen before a tenant
  *    context exists (login/registration). Never expose it to tenant requests.
  *
- * APP_DATABASE_URL → gst_app (runtime). DATABASE_URL → superuser (migrations,
- * admin client). If APP_DATABASE_URL is unset we fall back to DATABASE_URL.
+ * APP_DATABASE_URL → gst_app (runtime). DATABASE_URL → privileged (migrations,
+ * admin client). In development APP_DATABASE_URL may be omitted and we fall back
+ * to DATABASE_URL for convenience — but in production that fallback would run
+ * tenant queries as the privileged role and silently BYPASS RLS, leaking data
+ * across tenants. So we refuse to boot in production without APP_DATABASE_URL.
  */
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   readonly admin: PrismaClient;
+  private static readonly log = new Logger('PrismaService');
 
   constructor() {
+    PrismaService.assertTenantIsolation();
     super({ datasources: { db: { url: process.env.APP_DATABASE_URL || process.env.DATABASE_URL } } });
     this.admin = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL } } });
+  }
+
+  /**
+   * Fail fast rather than silently disable multi-tenant isolation. In any
+   * production-like environment the runtime connection MUST use a distinct,
+   * NOBYPASSRLS role (APP_DATABASE_URL) — otherwise RLS is bypassed and tenants
+   * can read each other's data.
+   */
+  private static assertTenantIsolation() {
+    const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+    if (isProd && !process.env.APP_DATABASE_URL) {
+      throw new Error(
+        'FATAL: APP_DATABASE_URL is not set in a production environment. The app ' +
+          'would connect as the privileged DATABASE_URL role and BYPASS Row-Level ' +
+          'Security, exposing every tenant to every other tenant. Set APP_DATABASE_URL ' +
+          'to a NOBYPASSRLS role (see VERCEL_DEPLOY.md → "two-role database").',
+      );
+    }
+    if (!process.env.APP_DATABASE_URL) {
+      PrismaService.log.warn(
+        'APP_DATABASE_URL not set — using DATABASE_URL for runtime queries. RLS is ' +
+          'only enforced when the runtime role is NOBYPASSRLS. Acceptable for local dev only.',
+      );
+    }
   }
 
   async onModuleInit() {
