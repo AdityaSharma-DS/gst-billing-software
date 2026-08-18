@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "copy:landing": "node scripts/copy-landing.mjs",
+    "predev": "node scripts/copy-landing.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/copy-landing.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx"

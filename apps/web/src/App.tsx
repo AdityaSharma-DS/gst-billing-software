@@ -20,6 +20,7 @@ import { Expenses } from './pages/Expenses';
 import { Recurring } from './pages/Recurring';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { Landing } from './pages/Landing';
 import { Toaster } from './components/Toaster';
 import { isAdminAuthed } from './admin/adminApi';
 import { AdminLogin } from './admin/AdminLogin';
@@ -42,6 +43,8 @@ export default function App() {
     <>
     <Toaster />
     <Routes>
+      {/* Public marketing landing at the root */}
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
@@ -53,8 +56,8 @@ export default function App() {
         <Route path="plans" element={<AdminPlans />} />
         <Route path="gst-apis" element={<AdminGstConfig />} />
       </Route>
-      <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
+      {/* Authenticated app (pathless layout → children resolve to /dashboard, /clients, …) */}
+      <Route element={<RequireAuth><Layout /></RequireAuth>}>
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="clients" element={<Clients />} />
         <Route path="vendors" element={<Vendors />} />
