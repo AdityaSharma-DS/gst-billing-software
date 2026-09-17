@@ -33,7 +33,7 @@ export function Returns() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<MainTab>('GSTR-1');
   const [sub, setSub] = useState<SubTab>('B2B');
-  const [period, setPeriod] = useState('06-2026');
+  const [period, setPeriod] = useState(() => recentPeriods()[0]);
 
   const { data: returns = [] } = useQuery({ queryKey: ['returns'], queryFn: async () => (await api.get<GstReturn[]>('/returns')).data });
   const { data: compliance = [] } = useQuery({ queryKey: ['compliance'], queryFn: async () => (await api.get<ComplianceRow[]>('/returns/compliance')).data });

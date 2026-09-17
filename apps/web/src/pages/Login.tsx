@@ -6,14 +6,18 @@ import { PasswordInput } from '../components/PasswordInput';
 
 export function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('rememberEmail') ?? '');
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(() => !!localStorage.getItem('rememberEmail'));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(''); setBusy(true);
+    // Remember the email for next time (opt-in); clear it when unchecked.
+    if (remember) localStorage.setItem('rememberEmail', email.trim());
+    else localStorage.removeItem('rememberEmail');
     try {
       const { data } = await api.post('/auth/login', { email: email.trim(), password });
       localStorage.setItem('accessToken', data.accessToken);
@@ -37,7 +41,7 @@ export function Login() {
         <label>Password<PasswordInput placeholder="Password" value={password} onChange={setPassword} autoComplete="current-password" /></label>
 
         <div className="auth-row">
-          <label className="checkbox"><input type="checkbox" /> Remember me</label>
+          <label className="checkbox"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Remember me</label>
           <Link className="small" to="/forgot-password">Forgot password?</Link>
         </div>
 

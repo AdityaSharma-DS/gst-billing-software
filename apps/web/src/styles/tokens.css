@@ -45,6 +45,10 @@
   --color-up: #1F9254;     /* positive deltas (green +5%) */
   --color-down: #D14343;   /* negative deltas (red) */
 
+  /* Inverse surfaces — stay dark-on-light in both themes (toasts, avatars) */
+  --color-toast-bg: #1F2024;  --color-toast-fg: #FFFFFF;
+  --color-avatar-bg: #1F2024; --color-avatar-fg: #FFFFFF;
+
   /* ── Bill status tokens (exact from Figma 13:142) ── */
   --status-draft-bg: #F1EFE8;       --status-draft-fg: #5F5E5A;
   --status-approved-bg: #E6F1FB;    --status-approved-fg: #185FA5;
@@ -82,6 +86,9 @@
   --color-text: #ECEDEF;
   --color-text-muted: #9A9CA4;
   --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  /* Lighter-than-surface so they stand out on a dark page */
+  --color-toast-bg: #33353C;  --color-toast-fg: #ECEDEF;
+  --color-avatar-bg: #3A3C44; --color-avatar-fg: #ECEDEF;
 }
 /* Keep the login card readable in dark mode */
 :root[data-theme="dark"] .auth-wrap { background: #0E0F12; }

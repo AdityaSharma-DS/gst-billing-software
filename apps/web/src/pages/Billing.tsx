@@ -23,7 +23,7 @@ function featuresFor(p: Plan): string[] {
 function PlanCard({ plan, highlight, current, onChoose }: { plan: Plan; highlight: boolean; current: boolean; onChoose: (p: Plan) => void }) {
   return (
     <div className={`price-card ${highlight ? 'price-card--hi' : ''}`}>
-      <div className="price-tag">PROFESSIONAL</div>
+      <div className="price-tag">{highlight ? 'RECOMMENDED' : plan.interval}</div>
       <div className="price-head">
         <span className="price-name">{plan.name}</span>
         <span className="price-per">{inr(Number(plan.priceInr))} {per(plan.interval)}</span>

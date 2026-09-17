@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, logout } from '../lib/api';
 import { Logo } from './Logo';
@@ -53,6 +54,13 @@ function PlanCard() {
 }
 
 export function Layout() {
+  const navigate = useNavigate();
+  const [q, setQ] = useState('');
+  function onSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const term = q.trim();
+    if (term) navigate(`/invoices?q=${encodeURIComponent(term)}`);
+  }
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -76,10 +84,10 @@ export function Layout() {
 
       <div className="main">
         <header className="topbar">
-          <div className="searchbox">
+          <form className="searchbox" onSubmit={onSearch} role="search">
             <IconSearch size={18} />
-            <input placeholder="Search" />
-          </div>
+            <input placeholder="Search invoices, parties…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search invoices and parties" />
+          </form>
           <NotificationsBell />
           <button className="btn-ghost" onClick={logout}>Logout</button>
         </header>

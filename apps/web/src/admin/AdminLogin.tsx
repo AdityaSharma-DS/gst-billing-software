@@ -5,7 +5,7 @@ import { Logo } from '../components/Logo';
 
 export function AdminLogin() {
   const nav = useNavigate();
-  const [email, setEmail] = useState('master@donicy.in');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,8 +27,8 @@ export function AdminLogin() {
         <div className="auth-logo"><Logo /></div>
         <h1>Master Admin</h1>
         <p className="muted small">Platform console — licenses, plans &amp; GST APIs</p>
-        <label>Email<input value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-        <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+        <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" autoComplete="username" /></label>
+        <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" /></label>
         {err && <p className="error">{err}</p>}
         <button className="btn-block" disabled={busy} type="submit">{busy ? 'Signing in…' : 'Sign in'}</button>
       </form>
