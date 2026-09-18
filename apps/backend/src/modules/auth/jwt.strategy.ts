@@ -22,7 +22,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         ExtractJwt.fromUrlQueryParameter('token'),
       ]),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_SECRET') || 'dev-secret',
+      // No insecure fallback: boot-time env validation guarantees JWT_SECRET is set.
+      secretOrKey: config.getOrThrow<string>('JWT_SECRET'),
     });
   }
 

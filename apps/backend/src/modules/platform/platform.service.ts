@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException, UnauthorizedExcepti
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { decryptSecret, encryptSecret } from '../../common/crypto/secret.util';
 
 const GST_CONFIG_KEY = 'gst_api_config';
 
@@ -121,7 +122,11 @@ export class PlatformService {
       fastGstUrl: '', fastGstApiKey: '',
     };
     // Merge so newly-added keys appear even for configs saved under the old shape.
-    return { ...defaults, ...((row?.value as object) ?? {}) };
+    const cfg: any = { ...defaults, ...((row?.value as object) ?? {}) };
+    // Decrypt the stored client secret for internal use (masked before it ever
+    // reaches the browser — see getGstConfigMasked).
+    cfg.clientSecret = decryptSecret(cfg.clientSecret);
+    return cfg;
   }
 
   /** Never expose the client secret to the browser; report only whether it's set. */
@@ -135,6 +140,8 @@ export class PlatformService {
     // If the UI sends the masked placeholder, keep the stored secret.
     const merged = { ...existing, ...value };
     if (!value?.clientSecret || value.clientSecret === '********') merged.clientSecret = existing.clientSecret ?? '';
+    // Encrypt the client secret at rest (existing is already decrypted plaintext).
+    merged.clientSecret = encryptSecret(merged.clientSecret);
     await this.prisma.admin.platformSetting.upsert({
       where: { key: GST_CONFIG_KEY },
       create: { key: GST_CONFIG_KEY, value: merged },

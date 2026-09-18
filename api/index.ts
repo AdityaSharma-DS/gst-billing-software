@@ -8,10 +8,19 @@
  */
 import 'reflect-metadata';
 import express from 'express';
+import helmet from 'helmet';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
+
+// CORS policy (inlined to keep the serverless bundle self-contained). Same-origin
+// only in production unless CORS_ORIGINS (comma-separated) is set. On Vercel the
+// SPA and API share an origin, so no list is needed.
+function corsOptions() {
+  const list = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
+  return list.length ? { origin: list, credentials: true } : { origin: false as const, credentials: true };
+}
 
 let cachedServer: express.Express | null = null;
 
@@ -25,13 +34,15 @@ async function bootstrap(): Promise<express.Express> {
   const { AppModule } = require('../apps/backend/dist/app.module');
 
   const server = express();
+  server.set('trust proxy', 1); // client IPs from X-Forwarded-For (rate limiting)
+  server.use(helmet());
   const app = await NestFactory.create(AppModule, new ExpressAdapter(server), {
     logger: ['error', 'warn'],
   });
 
   app.setGlobalPrefix(process.env.API_PREFIX || 'api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors();
+  app.enableCors(corsOptions());
 
   await app.init();
   cachedServer = server;

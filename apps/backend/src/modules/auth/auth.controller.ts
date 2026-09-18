@@ -1,4 +1,5 @@
 import { Body, Controller, Post, Req } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 import { AuthService } from './auth.service';
@@ -28,6 +29,9 @@ class ResetPasswordDto {
   @IsString() @MinLength(6) password!: string;
 }
 
+// Tighter limit on unauthenticated auth endpoints to blunt credential stuffing
+// and reset-token guessing (10 requests/min per IP).
+@Throttle({ default: { limit: 10, ttl: 60_000 } })
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}

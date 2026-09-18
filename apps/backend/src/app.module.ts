@@ -1,5 +1,8 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { validateEnv } from './common/config/env.validation';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { TenantMiddleware } from './common/tenancy/tenant.middleware';
 import { AuthModule } from './modules/auth/auth.module';
@@ -24,7 +27,11 @@ import { StorageModule } from './common/storage/storage.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    // Baseline rate limit per IP (best-effort in-memory; use a shared store
+    // like Redis for robust limiting across serverless instances). Sensitive
+    // auth routes add a stricter @Throttle.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
     StorageModule,
     AuthModule,
@@ -46,6 +53,7 @@ import { StorageModule } from './common/storage/storage.module';
     UsersModule,
     PlatformModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

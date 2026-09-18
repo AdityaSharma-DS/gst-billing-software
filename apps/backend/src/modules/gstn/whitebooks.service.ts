@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { decryptSecret } from '../../common/crypto/secret.util';
 
 const GST_CONFIG_KEY = 'gst_api_config';
 
@@ -60,7 +61,7 @@ export class WhiteBooksService {
       baseUrl: (c.baseUrl ?? this.config.get('GSP_BASE_URL') ?? '').replace(/\/+$/, ''),
       email: c.email ?? this.config.get('GSP_EMAIL') ?? '',
       clientId: c.clientId ?? this.config.get('GSP_CLIENT_ID') ?? '',
-      clientSecret: c.clientSecret ?? this.config.get('GSP_CLIENT_SECRET') ?? '',
+      clientSecret: c.clientSecret ? decryptSecret(c.clientSecret) : (this.config.get('GSP_CLIENT_SECRET') ?? ''),
       ipAddress: c.ipAddress ?? this.config.get('GSP_IP_ADDRESS') ?? '',
     };
     const ready = cfg.baseUrl && cfg.email && cfg.clientId && cfg.clientSecret;
@@ -77,7 +78,7 @@ export class WhiteBooksService {
     if (!org?.gstin || !org?.gspUsername || !org?.gspPassword) {
       throw new BadRequestException('Organization is missing NIC API credentials (GSTIN / username / password). Add them in Settings → GST APIs.');
     }
-    return { gstin: org.gstin, username: org.gspUsername, password: org.gspPassword };
+    return { gstin: org.gstin, username: org.gspUsername, password: decryptSecret(org.gspPassword) };
   }
 
   // ── HTTP ──

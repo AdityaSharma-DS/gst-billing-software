@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { PlatformService } from './platform.service';
 import { PlatformAuthGuard } from './platform-auth.guard';
 
@@ -6,7 +7,8 @@ import { PlatformAuthGuard } from './platform-auth.guard';
 export class PlatformController {
   constructor(private readonly platform: PlatformService) {}
 
-  // Public: master admin login
+  // Public: master admin login — tight rate limit against brute force.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('auth/login')
   login(@Body() body: { email: string; password: string }) {
     return this.platform.login(body.email, body.password);

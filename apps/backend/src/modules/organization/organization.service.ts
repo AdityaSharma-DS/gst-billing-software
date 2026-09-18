@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { StorageService } from '../../common/storage/storage.service';
 import { WhiteBooksService } from '../gstn/whitebooks.service';
+import { encryptSecret } from '../../common/crypto/secret.util';
 
 // Fields the client may update on the organization.
 const EDITABLE = [
@@ -41,6 +42,8 @@ export class OrganizationService {
     for (const k of EDITABLE) if (data[k] !== undefined) patch[k] = data[k];
     // Don't overwrite the stored password when the UI echoes the masked value.
     if (patch.gspPassword === '********') delete patch.gspPassword;
+    // Encrypt the taxpayer's NIC password at rest before it hits the DB.
+    else if (patch.gspPassword !== undefined) patch.gspPassword = encryptSecret(patch.gspPassword);
     await this.prisma.withTenant(tenantId, (tx) => tx.organization.update({ where: { id: org.id }, data: patch }));
     return this.get(tenantId);
   }
