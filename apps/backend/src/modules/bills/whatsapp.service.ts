@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { decryptSecret } from '../../common/crypto/secret.util';
 
 /**
  * WhatsApp invoice delivery.
@@ -14,7 +16,25 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly config: ConfigService, private readonly prisma: PrismaService) {}
+
+  /** Twilio credentials: master panel (whatsapp_config) first, then env. */
+  private async loadCreds(): Promise<{ sid?: string; token?: string; from?: string }> {
+    try {
+      const row = await this.prisma.admin.platformSetting.findUnique({ where: { key: 'whatsapp_config' } });
+      const c: any = (row?.value as any) ?? {};
+      if (c.accountSid && c.authToken && c.from) {
+        return { sid: c.accountSid, token: decryptSecret(c.authToken), from: c.from };
+      }
+    } catch (e: any) {
+      this.logger.warn(`Could not read WhatsApp config from DB: ${e?.message}`);
+    }
+    return {
+      sid: this.config.get<string>('TWILIO_ACCOUNT_SID'),
+      token: this.config.get<string>('TWILIO_AUTH_TOKEN'),
+      from: this.config.get<string>('TWILIO_WHATSAPP_FROM'),
+    };
+  }
 
   /** Normalize an Indian phone number to E.164 (+91…). */
   private e164(phone?: string | null): string | null {
@@ -45,12 +65,10 @@ export class WhatsappService {
     const message = this.buildMessage(bill, org);
     const waLink = `https://wa.me/${to ? to.replace('+', '') : ''}?text=${encodeURIComponent(message)}`;
 
-    const sid = this.config.get<string>('TWILIO_ACCOUNT_SID');
-    const token = this.config.get<string>('TWILIO_AUTH_TOKEN');
-    const from = this.config.get<string>('TWILIO_WHATSAPP_FROM'); // e.g. whatsapp:+14155238886
+    const { sid, token, from } = await this.loadCreds(); // e.g. from = whatsapp:+14155238886
 
     if (!sid || !token || !from) {
-      return { apiSent: false, reason: 'WhatsApp API not configured (set TWILIO_* in .env) — use the share link', waLink, to };
+      return { apiSent: false, reason: 'WhatsApp API not configured (set it in the master panel → Integrations) — use the share link', waLink, to };
     }
     if (!to) return { apiSent: false, reason: 'Client has no valid phone number', waLink, to };
 

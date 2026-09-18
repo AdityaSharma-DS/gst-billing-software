@@ -149,4 +149,40 @@ export class PlatformService {
     });
     return { saved: true };
   }
+
+  // ── Generic platform-settings section (secret fields encrypted at rest) ──
+  private async getSection(key: string, defaults: Record<string, any>, secretFields: string[]) {
+    const row = await this.prisma.admin.platformSetting.findUnique({ where: { key } });
+    const cfg: any = { ...defaults, ...((row?.value as object) ?? {}) };
+    for (const f of secretFields) cfg[f] = decryptSecret(cfg[f]);
+    return cfg;
+  }
+  private maskSection(cfg: any, secretFields: string[]) {
+    const out: any = { ...cfg };
+    for (const f of secretFields) { out[`${f}Set`] = !!cfg[f]; out[f] = cfg[f] ? '********' : ''; }
+    return out;
+  }
+  private async setSection(key: string, value: any, defaults: Record<string, any>, secretFields: string[]) {
+    const existing = await this.getSection(key, defaults, secretFields);
+    const merged: any = { ...existing, ...value };
+    for (const f of secretFields) {
+      // Keep the stored secret when the UI echoes the masked placeholder / empty.
+      if (!value?.[f] || value[f] === '********') merged[f] = existing[f] ?? '';
+      merged[f] = encryptSecret(merged[f]);
+    }
+    await this.prisma.admin.platformSetting.upsert({ where: { key }, create: { key, value: merged }, update: { value: merged } });
+    return { saved: true };
+  }
+
+  // ── Email / SMTP (platform-wide; used for password resets + invoice emails) ──
+  private readonly SMTP_DEFAULTS = { host: '', port: 587, user: '', pass: '', from: '', secure: false };
+  getSmtpConfig() { return this.getSection('smtp_config', this.SMTP_DEFAULTS, ['pass']); }
+  async getSmtpConfigMasked() { return this.maskSection(await this.getSmtpConfig(), ['pass']); }
+  setSmtpConfig(value: any) { return this.setSection('smtp_config', value, this.SMTP_DEFAULTS, ['pass']); }
+
+  // ── WhatsApp (Twilio) ──
+  private readonly WA_DEFAULTS = { accountSid: '', authToken: '', from: '' };
+  getWhatsappConfig() { return this.getSection('whatsapp_config', this.WA_DEFAULTS, ['authToken']); }
+  async getWhatsappConfigMasked() { return this.maskSection(await this.getWhatsappConfig(), ['authToken']); }
+  setWhatsappConfig(value: any) { return this.setSection('whatsapp_config', value, this.WA_DEFAULTS, ['authToken']); }
 }

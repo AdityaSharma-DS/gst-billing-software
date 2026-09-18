@@ -143,7 +143,7 @@ export class AuthService {
     // When email isn't configured, expose the link for local dev (or when
     // explicitly opted-in via EXPOSE_RESET_LINK) so the flow is testable.
     const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
-    const expose = !this.mail.isConfigured() && (!isProd || process.env.EXPOSE_RESET_LINK === 'true');
+    const expose = !(await this.mail.isConfigured()) && (!isProd || process.env.EXPOSE_RESET_LINK === 'true');
     if (!sent.sent) {
       // eslint-disable-next-line no-console
       console.warn(`[auth] password reset link for ${email}: ${resetUrl}`);

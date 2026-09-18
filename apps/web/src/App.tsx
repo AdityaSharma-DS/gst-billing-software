@@ -31,6 +31,7 @@ import { AdminOverview } from './admin/AdminOverview';
 import { AdminTenants } from './admin/AdminTenants';
 import { AdminPlans } from './admin/AdminPlans';
 import { AdminGstConfig } from './admin/AdminGstConfig';
+import { AdminIntegrations } from './admin/AdminIntegrations';
 
 function RequireAdmin({ children }: { children: JSX.Element }) {
   return isAdminAuthed() ? children : <Navigate to="/admin/login" replace />;
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="tenants" element={<AdminTenants />} />
         <Route path="plans" element={<AdminPlans />} />
         <Route path="gst-apis" element={<AdminGstConfig />} />
+        <Route path="integrations" element={<AdminIntegrations />} />
       </Route>
       {/* Authenticated app (pathless layout → children resolve to /dashboard, /clients, …) */}
       <Route element={<RequireAuth><Layout /></RequireAuth>}>

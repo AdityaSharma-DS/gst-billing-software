@@ -8,6 +8,7 @@ const nav = [
   { to: '/admin/tenants', label: 'Tenants & Licenses', Icon: IconClients },
   { to: '/admin/plans', label: 'Plans & Billing', Icon: IconReports },
   { to: '/admin/gst-apis', label: 'GST API Config', Icon: IconSettings },
+  { to: '/admin/integrations', label: 'Integrations', Icon: IconSettings },
 ];
 
 export function AdminLayout() {

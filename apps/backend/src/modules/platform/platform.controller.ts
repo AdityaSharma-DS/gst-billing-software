@@ -2,10 +2,11 @@ import { Body, Controller, Get, Param, Patch, Post, Put, UseGuards } from '@nest
 import { Throttle } from '@nestjs/throttler';
 import { PlatformService } from './platform.service';
 import { PlatformAuthGuard } from './platform-auth.guard';
+import { MailService } from '../bills/mail.service';
 
 @Controller('admin')
 export class PlatformController {
-  constructor(private readonly platform: PlatformService) {}
+  constructor(private readonly platform: PlatformService, private readonly mail: MailService) {}
 
   // Public: master admin login — tight rate limit against brute force.
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
@@ -60,5 +61,37 @@ export class PlatformController {
   @UseGuards(PlatformAuthGuard)
   setGstConfig(@Body() body: any) {
     return this.platform.setGstConfig(body);
+  }
+
+  // ── Email / SMTP ──
+  @Get('smtp-config')
+  @UseGuards(PlatformAuthGuard)
+  smtpConfig() {
+    return this.platform.getSmtpConfigMasked();
+  }
+
+  @Put('smtp-config')
+  @UseGuards(PlatformAuthGuard)
+  setSmtpConfig(@Body() body: any) {
+    return this.platform.setSmtpConfig(body);
+  }
+
+  @Post('smtp-config/test')
+  @UseGuards(PlatformAuthGuard)
+  testSmtp() {
+    return this.mail.verify();
+  }
+
+  // ── WhatsApp (Twilio) ──
+  @Get('whatsapp-config')
+  @UseGuards(PlatformAuthGuard)
+  whatsappConfig() {
+    return this.platform.getWhatsappConfigMasked();
+  }
+
+  @Put('whatsapp-config')
+  @UseGuards(PlatformAuthGuard)
+  setWhatsappConfig(@Body() body: any) {
+    return this.platform.setWhatsappConfig(body);
   }
 }

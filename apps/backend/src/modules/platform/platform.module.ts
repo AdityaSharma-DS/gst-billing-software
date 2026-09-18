@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PlatformController } from './platform.controller';
 import { PlatformService } from './platform.service';
 import { PlatformAuthGuard } from './platform-auth.guard';
+import { MailService } from '../bills/mail.service';
 
 @Module({
   imports: [
@@ -14,6 +15,6 @@ import { PlatformAuthGuard } from './platform-auth.guard';
     }),
   ],
   controllers: [PlatformController],
-  providers: [PlatformService, PlatformAuthGuard],
+  providers: [PlatformService, PlatformAuthGuard, MailService],
 })
 export class PlatformModule {}
