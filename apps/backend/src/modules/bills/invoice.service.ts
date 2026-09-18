@@ -104,7 +104,7 @@ export class InvoiceService {
     y += h1; const h2 = 116;
     box(L, y, R - L, h2); vline(300, y, y + h2);
     // seller — company branding: logo if uploaded, else the trade name
-    const logoBuf = this.storage.readByUrl(org?.logoUrl);
+    const logoBuf = await this.storage.readByUrl(org?.logoUrl);
     if (logoBuf) {
       try { doc.image(logoBuf, L + 8, y + 8, { fit: [110, 26] }); } catch { /* ignore bad image */ }
     } else {

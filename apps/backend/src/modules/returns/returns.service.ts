@@ -60,7 +60,7 @@ export class ReturnsService {
   async json(tenantId: string, id: string) {
     const ret = await this.prisma.withTenant(tenantId, (tx) => tx.gstReturn.findUnique({ where: { id } }));
     if (!ret) throw new NotFoundException('Return not found');
-    const buf = this.storage.readByUrl(ret.jsonUrl);
+    const buf = await this.storage.readByUrl(ret.jsonUrl);
     if (!buf) throw new NotFoundException('Generated JSON not found — regenerate the return');
     return { filename: `${ret.returnType}_${ret.period}_v${ret.version}.json`, json: buf.toString('utf-8') };
   }
