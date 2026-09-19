@@ -124,21 +124,27 @@ export function AddPurchaseModal({ onClose, onSaved }: { onClose: () => void; on
       </div>
 
       <h4 className="section-label">List Items</h4>
-      <table className="data-table compact">
+      <div className="item-table-wrap">
+      <table className="data-table compact items-purchase">
+        <colgroup>
+          <col /><col style={{ width: 84 }} /><col style={{ width: 110 }} />
+          <col style={{ width: 92 }} /><col style={{ width: 104 }} /><col style={{ width: 44 }} />
+        </colgroup>
         <thead><tr><th>Description</th><th className="num">Qty</th><th className="num">Rate</th><th className="num">GST%</th><th className="num">Amount</th><th></th></tr></thead>
         <tbody>
           {items.map((i) => (
             <tr key={i.id}>
               <td><input className="cell-input" value={i.desc} onChange={(e) => update(i.id, 'desc', e.target.value)} placeholder="Item" /></td>
-              <td className="num"><input className="cell-input w60 num" type="number" value={i.qty} onChange={(e) => update(i.id, 'qty', +e.target.value)} /></td>
-              <td className="num"><input className="cell-input w90 num" type="number" value={i.rate} onChange={(e) => update(i.id, 'rate', +e.target.value)} /></td>
-              <td className="num"><select className="cell-input w80" value={i.gst} onChange={(e) => update(i.id, 'gst', +e.target.value)}>{GST_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}</select></td>
+              <td className="num"><input className="cell-input num" type="number" value={i.qty} onChange={(e) => update(i.id, 'qty', +e.target.value)} /></td>
+              <td className="num"><input className="cell-input num" type="number" value={i.rate} onChange={(e) => update(i.id, 'rate', +e.target.value)} /></td>
+              <td className="num"><select className="cell-input" value={i.gst} onChange={(e) => update(i.id, 'gst', +e.target.value)}>{GST_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}</select></td>
               <td className="num">₹{(i.qty * i.rate * (1 + i.gst / 100)).toFixed(2)}</td>
               <td className="num"><button className="row-del" onClick={() => setItems((xs) => xs.filter((x) => x.id !== i.id))}>×</button></td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
       <div className="modal-itemfoot">
         <button className="btn-ghost" onClick={() => setItems([...items, newItem()])}>+ add item</button>
         <span className="cell-strong">Total: ₹{total.toFixed(2)}</span>

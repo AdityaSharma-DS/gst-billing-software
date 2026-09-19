@@ -297,7 +297,13 @@ export function BillForm() {
             <button className="btn-ghost" onClick={() => { setNi({ name: '', barcode: '', hsn: '', unit: 'pcs', rate: 0, gst: 18 }); setItemOpen(true); }}>+ New Item</button>
             {scannerPrefs.enabled && <span className="scanner-chip" title="Hardware scanner active — scan anywhere on this page">● Scanner ready</span>}
           </div>
-          <table className="data-table compact">
+          <div className="item-table-wrap">
+          <table className="data-table compact items-sales">
+            <colgroup>
+              <col /><col style={{ width: 96 }} /><col style={{ width: 72 }} /><col style={{ width: 76 }} />
+              <col style={{ width: 104 }} /><col style={{ width: 88 }} /><col style={{ width: 92 }} />
+              <col style={{ width: 104 }} /><col style={{ width: 44 }} />
+            </colgroup>
             <thead><tr><th>Description</th><th>HSN/SAC</th><th className="num">Qty</th><th>Unit</th><th className="num">Rate</th><th className="num">Disc</th><th className="num">GST%</th><th className="num">Amount</th><th></th></tr></thead>
             <tbody>
               {lines.map((l) => (
@@ -312,18 +318,19 @@ export function BillForm() {
                         : x))}
                     />
                   </td>
-                  <td><input className="cell-input w80" value={l.hsn} onChange={(e) => update(l.id, 'hsn', e.target.value)} /></td>
-                  <td className="num"><input className="cell-input w60 num" type="number" value={l.qty} onChange={(e) => update(l.id, 'qty', +e.target.value)} /></td>
-                  <td><input className="cell-input w60" value={l.unit} onChange={(e) => update(l.id, 'unit', e.target.value)} /></td>
-                  <td className="num"><input className="cell-input w90 num" type="number" value={l.rate} onChange={(e) => update(l.id, 'rate', +e.target.value)} /></td>
-                  <td className="num"><input className="cell-input w60 num" type="number" value={l.disc} onChange={(e) => update(l.id, 'disc', +e.target.value)} /></td>
-                  <td className="num"><select className="cell-input w80" value={l.gst} disabled={noGst} onChange={(e) => update(l.id, 'gst', +e.target.value)}>{GST_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}</select></td>
+                  <td><input className="cell-input" value={l.hsn} onChange={(e) => update(l.id, 'hsn', e.target.value)} /></td>
+                  <td className="num"><input className="cell-input num" type="number" value={l.qty} onChange={(e) => update(l.id, 'qty', +e.target.value)} /></td>
+                  <td><input className="cell-input" value={l.unit} onChange={(e) => update(l.id, 'unit', e.target.value)} /></td>
+                  <td className="num"><input className="cell-input num" type="number" value={l.rate} onChange={(e) => update(l.id, 'rate', +e.target.value)} /></td>
+                  <td className="num"><input className="cell-input num" type="number" value={l.disc} onChange={(e) => update(l.id, 'disc', +e.target.value)} /></td>
+                  <td className="num"><select className="cell-input" value={l.gst} disabled={noGst} onChange={(e) => update(l.id, 'gst', +e.target.value)}>{GST_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}</select></td>
                   <td className="num">{inr(Math.max(0, l.qty * l.rate - l.disc) * (1 + (noGst ? 0 : l.gst) / 100))}</td>
                   <td className="num"><button className="row-del" onClick={() => setLines((ls) => ls.filter((x) => x.id !== l.id))}>×</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
           <button className="btn-ghost" onClick={() => setLines([...lines, newLine()])}>+ Add Items</button>
 
           <div className="form-grid form-grid--2" style={{ marginTop: 16 }}>

@@ -164,9 +164,19 @@ button { font-family: var(--font-sans); cursor: pointer; }
 /* Design uses orange section titles inside the invoice/settings cards */
 .section-label { margin: var(--space-6) 0 var(--space-3); font-size: 15px; font-weight: var(--fw-semibold); color: var(--color-primary); }
 .section-label:first-child { margin-top: 0; }
-.cell-input { width: 100%; padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-sans); font-size: 13px; }
+.cell-input { width: 100%; min-width: 0; box-sizing: border-box; padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-sans); font-size: 13px; }
 .cell-input.num { text-align: right; }
-.w60 { width: 60px; } .w80 { width: 80px; } .w90 { width: 90px; }
+.w60 { width: 76px; } .w80 { width: 100px; } .w90 { width: 112px; }
+/* Line-item table: fixed layout so each column keeps its set width (colgroup)
+   and inputs fill their cell; the table scrolls horizontally on narrow screens
+   instead of squeezing cells below a readable width. Numeric spinners hidden. */
+.item-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.item-table-wrap .data-table { table-layout: fixed; }
+.item-table-wrap .data-table.items-sales { min-width: 880px; }
+.item-table-wrap .data-table.items-purchase { min-width: 600px; }
+.cell-input[type=number]::-webkit-inner-spin-button,
+.cell-input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.cell-input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .row-del { background: transparent; border: 0; color: var(--color-down); font-size: 18px; line-height: 1; }
 
 /* Modal */
