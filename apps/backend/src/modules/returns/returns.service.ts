@@ -358,8 +358,17 @@ export class ReturnsService {
 
   /** Filing status + due dates + late-fee estimate for the compliance dashboard. */
   async compliance(tenantId: string) {
-    const returns = await this.prisma.withTenant(tenantId, (tx) => tx.gstReturn.findMany());
+    const { returns, activePeriods } = await this.prisma.withTenant(tenantId, async (tx) => {
+      const returns = await tx.gstReturn.findMany();
+      // Periods (MM-YYYY) where the tenant actually made outward supplies — only
+      // these need GSTR-1/3B, so we don't invent overdue late fees for months the
+      // business had no activity (or wasn't even using the app yet).
+      const bills = await tx.bill.findMany({ where: { direction: 'OUTGOING', status: { not: 'CANCELLED' } }, select: { billDate: true } });
+      const activePeriods = new Set(bills.map((b) => { const d = new Date(b.billDate); return `${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`; }));
+      return { returns, activePeriods };
+    });
     const filed = new Map(returns.filter((r) => r.status === 'FILED').map((r) => [`${r.returnType}-${r.period}`, r]));
+    const generated = new Set(returns.map((r) => `${r.returnType}-${r.period}`));
 
     const now = new Date();
     const rows: any[] = [];
@@ -368,6 +377,9 @@ export class ReturnsService {
       const d = new Date(now.getFullYear(), now.getMonth() - 1 - i, 1);
       const period = `${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
       for (const [type, dueDay] of [['GSTR1', 11], ['GSTR3B', 20]] as const) {
+        // Only show a return that's actually due: the period had outward supply,
+        // or a return for it has already been generated/filed.
+        if (!activePeriods.has(period) && !generated.has(`${type}-${period}`)) continue;
         const due = new Date(d.getFullYear(), d.getMonth() + 1, dueDay);
         const isFiled = filed.has(`${type}-${period}`);
         const overdueDays = !isFiled && now > due ? Math.floor((now.getTime() - due.getTime()) / 86400000) : 0;

@@ -5,6 +5,7 @@ import { Modal } from './Modal';
 import { StateSelect } from './StateSelect';
 import { getDefaultState } from '../lib/states';
 import { GST_RATES } from '../lib/gst';
+import { isValidGstin, gstinStateCode } from '../lib/gstin';
 
 interface Item { id: string; desc: string; qty: number; rate: number; gst: number; }
 interface Vendor { id: string; name: string; }
@@ -26,6 +27,23 @@ export function AddPurchaseModal({ onClose, onSaved }: { onClose: () => void; on
   const [items, setItems] = useState<Item[]>([newItem()]);
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
+  const [gstStatus, setGstStatus] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle');
+
+  /** Validate + auto-fill from the vendor's GSTIN: state offline; name/address via GSP when available. */
+  async function fetchFromGstin() {
+    const g = gstin.trim().toUpperCase();
+    if (!g || !isValidGstin(g)) return;
+    const code = gstinStateCode(g);
+    if (code) setStateCode(code); // vendor's state = place of supply for purchases
+    setGstStatus('loading');
+    try {
+      const { data } = await api.get(`/gstn/gstin/${g}`);
+      if (data.name && !businessName) setBusinessName(data.name);
+      if (data.address && !description) setDescription(data.address);
+      if (data.stateCode) setStateCode(data.stateCode);
+      setGstStatus('ok');
+    } catch { setGstStatus('fail'); }
+  }
 
   const { data: vendors = [] } = useQuery({
     queryKey: ['parties', 'INCOMING'],
@@ -81,7 +99,11 @@ export function AddPurchaseModal({ onClose, onSaved }: { onClose: () => void; on
 
         <label>Business Name *<input list="vendor-names" value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Vendor name" /></label>
         <datalist id="vendor-names">{vendors.map((v) => <option key={v.id} value={v.name} />)}</datalist>
-        <label>Business GSTIN<input value={gstin} onChange={(e) => setGstin(e.target.value)} placeholder="27ABCDE1234F1Z5" /></label>
+        <label>Business GSTIN
+          <input value={gstin}
+            onChange={(e) => { setGstin(e.target.value.toUpperCase()); setGstStatus('idle'); }}
+            onBlur={fetchFromGstin} placeholder="27ABCDE1234F1Z5" autoComplete="off" />
+        </label>
 
         <label>Invoice Bill No.<input value={vendorInvoiceNo} onChange={(e) => setVendorInvoiceNo(e.target.value)} placeholder="Supplier's bill no." /></label>
         <label>Payment Mode
@@ -116,6 +138,15 @@ export function AddPurchaseModal({ onClose, onSaved }: { onClose: () => void; on
         <button className="btn-ghost" onClick={() => setItems([...items, newItem()])}>+ add item</button>
         <span className="cell-strong">Total: ₹{total.toFixed(2)}</span>
       </div>
+      {gstin && !isValidGstin(gstin) && <p className="warn-item">⚠ GSTIN checksum doesn't match — double-check.</p>}
+      {gstin && isValidGstin(gstin) && (
+        <p className="muted small">
+          {gstStatus === 'loading' ? '⏳ Fetching details from the GST portal…'
+            : gstStatus === 'ok' ? '✓ Valid GSTIN — details auto-filled from the GST portal.'
+            : gstStatus === 'fail' ? '✓ Valid GSTIN — state set from the code. Couldn’t auto-fetch the rest (GST API not configured) — enter manually.'
+            : '✓ Valid GSTIN.'}
+        </p>
+      )}
       {err && <p className="error">{err}</p>}
     </Modal>
   );
