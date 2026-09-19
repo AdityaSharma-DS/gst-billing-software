@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { Modal } from './Modal';
 import { IconSearch } from './icons';
 import { isValidGstin } from '../lib/gstin';
+import { stateName } from '../lib/states';
 import { toast } from './Toaster';
 
 interface Party {
@@ -91,6 +92,30 @@ export function PartyList({ cfg }: { cfg: Config }) {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [search, setSearch] = useState('');
+  const [gstStatus, setGstStatus] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle');
+
+  /** Validate + auto-fill from a GSTIN: state offline (always), name/address via GSP when available. */
+  async function fetchFromGstin() {
+    const g = form.gstin.trim().toUpperCase();
+    if (!g || !isValidGstin(g)) return;
+    const st = stateName(g.slice(0, 2)); // offline: state code = first 2 digits
+    setForm((f) => ({ ...f, state: f.state || st }));
+    setGstStatus('loading');
+    try {
+      const { data } = await api.get(`/gstn/gstin/${g}`);
+      setForm((f) => ({
+        ...f,
+        name: f.name || data.name || '',
+        address: f.address || data.address || '',
+        pincode: f.pincode || data.pincode || '',
+        city: f.city || data.city || '',
+        state: data.stateCode ? stateName(data.stateCode) : (f.state || st),
+      }));
+      setGstStatus('ok');
+    } catch {
+      setGstStatus('fail'); // GSP not configured / no taxpayer creds — keep the offline state
+    }
+  }
 
   const { data: parties = [], isLoading } = useQuery({
     queryKey: [cfg.queryKey],
@@ -116,7 +141,7 @@ export function PartyList({ cfg }: { cfg: Config }) {
     onSuccess: () => { qc.invalidateQueries({ queryKey: [cfg.queryKey] }); toast(`${cfg.noun} deleted`); },
   });
 
-  function close() { setOpen(false); setEditId(null); setForm({ ...emptyForm }); }
+  function close() { setOpen(false); setEditId(null); setForm({ ...emptyForm }); setGstStatus('idle'); }
   function openEdit(c: Party) {
     const a = c.billingAddress ?? {};
     setEditId(c.id);
@@ -160,11 +185,23 @@ export function PartyList({ cfg }: { cfg: Config }) {
             <label>Pincode<input value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} /></label>
             <label>City<input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></label>
             <label>State<input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></label>
-            <label>GSTIN<input value={form.gstin} onChange={(e) => setForm({ ...form, gstin: e.target.value })} placeholder="27ABCDE1234F1Z5" /></label>
+            <label>GSTIN
+              <input value={form.gstin}
+                onChange={(e) => { setForm({ ...form, gstin: e.target.value.toUpperCase() }); setGstStatus('idle'); }}
+                onBlur={fetchFromGstin} placeholder="27ABCDE1234F1Z5" autoComplete="off" />
+            </label>
             <label>Email<input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
             <label>Phone<input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
           </div>
           {form.gstin && !isValidGstin(form.gstin) && <p className="warn-item">⚠ GSTIN checksum doesn't match — double-check before saving.</p>}
+          {form.gstin && isValidGstin(form.gstin) && (
+            <p className="muted small">
+              {gstStatus === 'loading' ? '⏳ Fetching details from the GST portal…'
+                : gstStatus === 'ok' ? '✓ Valid GSTIN — details auto-filled from the GST portal.'
+                : gstStatus === 'fail' ? '✓ Valid GSTIN — state set from the code. Couldn’t auto-fetch the rest (GST API not configured / taxpayer creds missing) — enter manually.'
+                : '✓ Valid GSTIN.'}
+            </p>
+          )}
           {!emailValid && <p className="warn-item">⚠ Enter a valid email address.</p>}
           {!phoneValid && <p className="warn-item">⚠ Enter a valid 10-digit mobile number.</p>}
         </Modal>
