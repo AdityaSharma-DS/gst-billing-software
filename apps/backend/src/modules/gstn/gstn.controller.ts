@@ -26,6 +26,7 @@ function normalize(raw: any) {
     city: first(p.dst, p.loc, p.AddrLoc, d.city),
     pincode: first(p.pncd, p.AddrPncd, d.pinCode, d.pncd),
     stateCode: stateCode ? String(stateCode).padStart(2, '0') : '',
+    stateName: '',
     status: first(d.sts, d.status, d.Status),
   };
 }
