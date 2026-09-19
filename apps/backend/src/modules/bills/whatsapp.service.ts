@@ -46,7 +46,7 @@ export class WhatsappService {
     return null;
   }
 
-  buildMessage(bill: any, org: any): string {
+  buildMessage(bill: any, org: any, pdfLink?: string): string {
     const inr = (n: any) => '₹' + Number(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
     const lines = [
       `Dear ${bill.party?.name ?? 'Customer'},`,
@@ -55,20 +55,34 @@ export class WhatsappService {
     ];
     if (bill.dueDate) lines.push(`Payment due by ${new Date(bill.dueDate).toLocaleDateString('en-IN')}.`);
     if (org?.upiId) lines.push(`Pay via UPI: ${org.upiId}`);
+    // wa.me click-to-chat can't carry a file, so link the invoice PDF for one-tap download.
+    if (pdfLink) lines.push(``, `📄 Download your invoice: ${pdfLink}`);
     lines.push(``, `Thank you,`, `${org?.tradeName ?? org?.legalName ?? 'DONICY'}`);
     return lines.join('\n');
   }
 
-  /** Send the invoice over WhatsApp. Returns the share link and (if configured) API delivery info. */
+  /** Resolve a publicly-reachable URL for the archived PDF (absolute Blob/S3 URL, or APP_PUBLIC_URL + /uploads path). */
+  private publicPdfUrl(pdfUrl?: string): string | undefined {
+    if (!pdfUrl) return undefined;
+    if (/^https?:\/\//i.test(pdfUrl)) return pdfUrl; // Vercel Blob / S3 — already public
+    const base = (this.config.get<string>('APP_PUBLIC_URL') || '').replace(/\/$/, '');
+    return base && pdfUrl.startsWith('/uploads/') ? base + pdfUrl : undefined;
+  }
+
+  /** Send the invoice over WhatsApp. Returns the share link (with a PDF download link) and, if configured, API delivery info. */
   async send(bill: any, org: any, pdfUrl: string, toOverride?: string) {
     const to = this.e164(toOverride || bill.party?.phone);
-    const message = this.buildMessage(bill, org);
+    const publicPdf = this.publicPdfUrl(pdfUrl);
+    const message = this.buildMessage(bill, org, publicPdf);
     const waLink = `https://wa.me/${to ? to.replace('+', '') : ''}?text=${encodeURIComponent(message)}`;
 
     const { sid, token, from } = await this.loadCreds(); // e.g. from = whatsapp:+14155238886
 
     if (!sid || !token || !from) {
-      return { apiSent: false, reason: 'WhatsApp API not configured (set it in the master panel → Integrations) — use the share link', waLink, to };
+      const reason = publicPdf
+        ? 'WhatsApp Business API not configured — opening the share link (the invoice PDF download link is included in the message).'
+        : 'WhatsApp Business API not configured, and no public PDF URL (set BLOB_READ_WRITE_TOKEN or APP_PUBLIC_URL) — the share link has no attachment.';
+      return { apiSent: false, reason, waLink, to, pdfUrl: publicPdf };
     }
     if (!to) return { apiSent: false, reason: 'Client has no valid phone number', waLink, to };
 
@@ -76,18 +90,17 @@ export class WhatsappService {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const twilio = require('twilio');
       const client = twilio(sid, token);
-      const publicBase = this.config.get<string>('APP_PUBLIC_URL'); // must be reachable by WhatsApp
-      const mediaUrl = publicBase && pdfUrl?.startsWith('/uploads/') ? [`${publicBase}${pdfUrl}`] : undefined;
+      const mediaUrl = publicPdf ? [publicPdf] : undefined; // attaches the PDF as a real WhatsApp document
       const msg = await client.messages.create({
         from,
         to: `whatsapp:${to}`,
         body: message,
         ...(mediaUrl ? { mediaUrl } : {}),
       });
-      return { apiSent: true, sid: msg.sid, status: msg.status, waLink, to };
+      return { apiSent: true, sid: msg.sid, status: msg.status, waLink, to, pdfUrl: publicPdf };
     } catch (e: any) {
       this.logger.warn(`Twilio WhatsApp send failed: ${e?.message}`);
-      return { apiSent: false, reason: e?.message ?? 'Twilio send failed', waLink, to };
+      return { apiSent: false, reason: e?.message ?? 'Twilio send failed', waLink, to, pdfUrl: publicPdf };
     }
   }
 }
