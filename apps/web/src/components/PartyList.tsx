@@ -186,9 +186,14 @@ export function PartyList({ cfg }: { cfg: Config }) {
             <label>City<input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></label>
             <label>State<input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></label>
             <label>GSTIN
-              <input value={form.gstin}
-                onChange={(e) => { setForm({ ...form, gstin: e.target.value.toUpperCase() }); setGstStatus('idle'); }}
-                onBlur={fetchFromGstin} placeholder="27ABCDE1234F1Z5" autoComplete="off" />
+              <div className="gstin-row">
+                <input value={form.gstin}
+                  onChange={(e) => { setForm({ ...form, gstin: e.target.value.toUpperCase() }); setGstStatus('idle'); }}
+                  onBlur={fetchFromGstin} placeholder="27ABCDE1234F1Z5" autoComplete="off" />
+                <button type="button" className="btn-ghost" disabled={!form.gstin.trim() || gstStatus === 'loading'} onClick={fetchFromGstin}>
+                  {gstStatus === 'loading' ? 'Validating…' : 'Validate'}
+                </button>
+              </div>
             </label>
             <label>Email<input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
             <label>Phone<input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>

@@ -376,6 +376,11 @@ button.quick:hover { border-color: var(--color-primary); transform: translateY(-
 .toggle-row { display: flex; align-items: flex-start; gap: var(--space-3); font-size: 13px; }
 .toggle-row input { margin-top: 3px; }
 
+/* GSTIN field with inline Validate button */
+.gstin-row { display: flex; gap: var(--space-2); align-items: stretch; }
+.gstin-row input { flex: 1; min-width: 0; }
+.gstin-row .btn-ghost { flex-shrink: 0; white-space: nowrap; }
+
 /* HSN/SAC search field */
 .hsn-search { position: relative; }
 .hsn-search input { width: 100%; }

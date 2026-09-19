@@ -100,9 +100,14 @@ export function AddPurchaseModal({ onClose, onSaved }: { onClose: () => void; on
         <label>Business Name *<input list="vendor-names" value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Vendor name" /></label>
         <datalist id="vendor-names">{vendors.map((v) => <option key={v.id} value={v.name} />)}</datalist>
         <label>Business GSTIN
-          <input value={gstin}
-            onChange={(e) => { setGstin(e.target.value.toUpperCase()); setGstStatus('idle'); }}
-            onBlur={fetchFromGstin} placeholder="27ABCDE1234F1Z5" autoComplete="off" />
+          <div className="gstin-row">
+            <input value={gstin}
+              onChange={(e) => { setGstin(e.target.value.toUpperCase()); setGstStatus('idle'); }}
+              onBlur={fetchFromGstin} placeholder="27ABCDE1234F1Z5" autoComplete="off" />
+            <button type="button" className="btn-ghost" disabled={!gstin.trim() || gstStatus === 'loading'} onClick={fetchFromGstin}>
+              {gstStatus === 'loading' ? 'Validating…' : 'Validate'}
+            </button>
+          </div>
         </label>
 
         <label>Invoice Bill No.<input value={vendorInvoiceNo} onChange={(e) => setVendorInvoiceNo(e.target.value)} placeholder="Supplier's bill no." /></label>
