@@ -22,6 +22,10 @@ export interface GspConfig {
   gst: { clientId: string; clientSecret: string };
   einvoice: { clientId: string; clientSecret: string };
   ewaybill: { clientId: string; clientSecret: string };
+  // Shared sandbox test taxpayer (from the WhiteBooks Credentials page): used as
+  // the NIC login for ALL tenants when environment is sandbox, so testing needs
+  // no per-business credentials. Ignored in production.
+  sandbox: { gstin: string; username: string; password: string };
 }
 
 /** Per-taxpayer NIC API credentials (created under the taxpayer's GST login). */
@@ -86,6 +90,11 @@ export class WhiteBooksService {
       gst: pair('gstClientId', 'gstClientSecret'),
       einvoice: pair('einvoiceClientId', 'einvoiceClientSecret'),
       ewaybill: pair('ewaybillClientId', 'ewaybillClientSecret'),
+      sandbox: {
+        gstin: c.sandboxGstin ?? '',
+        username: c.sandboxUsername ?? '',
+        password: c.sandboxPassword ? decryptSecret(c.sandboxPassword) : '',
+      },
     };
     const anyProduct = (['gst', 'einvoice', 'ewaybill'] as GspProduct[]).some((p) => cfg[p].clientId && cfg[p].clientSecret);
     return cfg.baseUrl && cfg.email && anyProduct ? cfg : null;
@@ -106,9 +115,15 @@ export class WhiteBooksService {
     return !!(cfg && org?.gstin && org?.gspUsername && org?.gspPassword);
   }
 
-  private creds(org: { gstin?: string | null; gspUsername?: string | null; gspPassword?: string | null }): GspCredentials {
+  private creds(org: { gstin?: string | null; gspUsername?: string | null; gspPassword?: string | null }, cfg?: GspConfig): GspCredentials {
+    // Sandbox: use the shared sandbox test taxpayer from the master panel (so no
+    // per-business creds are needed for testing).
+    const s = cfg?.sandbox;
+    if (cfg?.environment === 'sandbox' && s?.gstin && s?.username && s?.password) {
+      return { gstin: s.gstin, username: s.username, password: s.password };
+    }
     if (!org?.gstin || !org?.gspUsername || !org?.gspPassword) {
-      throw new BadRequestException('Organization is missing NIC API credentials (GSTIN / username / password). Add them in Settings → GST APIs.');
+      throw new BadRequestException('Organization is missing NIC API credentials (GSTIN / username / password). Add them in Settings → GST APIs, or set a sandbox test taxpayer in the master panel.');
     }
     return { gstin: org.gstin, username: org.gspUsername, password: decryptSecret(org.gspPassword) };
   }
@@ -180,7 +195,7 @@ export class WhiteBooksService {
   ): Promise<{ ok: boolean; environment: string; message: string }> {
     const cfg = await this.resolveConfig();
     if (!cfg) throw new BadRequestException('GSP is not configured. Set the product Client ID/Secret and account email in the master panel → GST API Config.');
-    const creds = this.creds(org);
+    const creds = this.creds(org, cfg);
     this.tokenCache.delete(`${product}:${creds.gstin}`);
     await this.authenticate(cfg, creds, product);
     return { ok: true, environment: cfg.environment, message: `Authenticated ${creds.gstin} for ${product} via ${cfg.provider} (${cfg.environment}).` };
@@ -195,7 +210,7 @@ export class WhiteBooksService {
   ): Promise<{ ewbNo: string; ewbDate: string; validUpto: string; raw: any }> {
     const cfg = await this.resolveConfig();
     if (!cfg) throw new BadRequestException('GSP is not configured.');
-    const creds = this.creds(org);
+    const creds = this.creds(org, cfg);
     const pc = this.productCreds(cfg, 'ewaybill');
     const token = await this.authenticate(cfg, creds, 'ewaybill');
 
@@ -223,7 +238,7 @@ export class WhiteBooksService {
   ): Promise<any> {
     const cfg = await this.resolveConfig();
     if (!cfg) throw new BadRequestException('GSP is not configured.');
-    const creds = this.creds(org);
+    const creds = this.creds(org, cfg);
     const pc = this.productCreds(cfg, 'ewaybill');
     const token = await this.authenticate(cfg, creds, 'ewaybill');
     const url = `${cfg.baseUrl}/ewaybillapi/v1.03/ewayapi/getgstindetails?` +
@@ -244,7 +259,7 @@ export class WhiteBooksService {
   ): Promise<{ irn: string; signedInvoice?: string; signedQr?: string; ackNo?: string; raw: any }> {
     const cfg = await this.resolveConfig();
     if (!cfg) throw new BadRequestException('GSP is not configured.');
-    const creds = this.creds(org);
+    const creds = this.creds(org, cfg);
     const pc = this.productCreds(cfg, 'einvoice');
     const token = await this.authenticate(cfg, creds, 'einvoice');
 

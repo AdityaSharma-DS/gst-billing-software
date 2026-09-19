@@ -120,9 +120,12 @@ export class PlatformService {
     einvoiceClientId: '', einvoiceClientSecret: '',  // EINS… / EINP…
     ewaybillClientId: '', ewaybillClientSecret: '',  // EWBS… / EWBP…
     clientId: '', clientSecret: '',    // legacy single-pair fallback
+    // Shared sandbox test taxpayer (from the WhiteBooks Credentials page) — used
+    // as the NIC login for all tenants in sandbox so testing needs no per-org creds.
+    sandboxGstin: '', sandboxUsername: '', sandboxPassword: '',
     fastGstUrl: '', fastGstApiKey: '',
   };
-  private readonly GST_SECRETS = ['gstClientSecret', 'einvoiceClientSecret', 'ewaybillClientSecret', 'clientSecret', 'fastGstApiKey'];
+  private readonly GST_SECRETS = ['gstClientSecret', 'einvoiceClientSecret', 'ewaybillClientSecret', 'clientSecret', 'sandboxPassword', 'fastGstApiKey'];
 
   getGstConfig() { return this.getSection(GST_CONFIG_KEY, this.GST_DEFAULTS, this.GST_SECRETS); }
   async getGstConfigMasked() { return this.maskSection(await this.getGstConfig(), this.GST_SECRETS); }

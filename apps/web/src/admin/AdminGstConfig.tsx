@@ -94,6 +94,29 @@ export function AdminGstConfig() {
         );
       })}
 
+      {env === 'sandbox' && (
+        <div className="card">
+          <h3 className="card-title">Sandbox Test Taxpayer</h3>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Sandbox only authenticates WhiteBooks' <b>test GSTINs</b>, not real ones. Enter the <b>Username, Password
+            and test GSTIN</b> from your WhiteBooks <b>Credentials</b> page (e-Way Bill / e-Invoice). This is used as the
+            NIC login for <b>all</b> tenants while testing — no per-business setup needed. Ignored in production.
+          </p>
+          <div className="form-grid form-grid--2">
+            <label>Test GSTIN
+              <input value={form.sandboxGstin ?? ''} onChange={(e) => set('sandboxGstin', e.target.value.toUpperCase())} placeholder="e.g. 36AAGCB1286Q004" autoComplete="off" />
+            </label>
+            <label>Username
+              <input value={form.sandboxUsername ?? ''} onChange={(e) => set('sandboxUsername', e.target.value)} placeholder="from your Credentials page" autoComplete="off" />
+            </label>
+            <label>Password
+              <input type="password" value={form.sandboxPassword ?? ''} onChange={(e) => set('sandboxPassword', e.target.value)}
+                placeholder={form.sandboxPasswordSet ? 'unchanged — leave to keep' : ''} autoComplete="new-password" />
+            </label>
+          </div>
+        </div>
+      )}
+
       <div className="card">
         <h3 className="card-title">Tax Rates (optional)</h3>
         <div className="form-grid form-grid--2">
