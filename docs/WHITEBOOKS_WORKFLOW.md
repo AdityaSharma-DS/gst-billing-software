@@ -41,6 +41,19 @@ Utilities: getewaybill, getgstindetails, gethsndetailsbyhsncode, gettransporterd
 ```
 **App status:** `genewaybill` ✓, `getgstindetails` ✓. Missing: cancel, Part-B update, extend, consolidated, multi-vehicle, queries.
 
+## Prerequisite for GST filing — "Enable API Access" on the GST portal (per business)
+Before a real GSTIN can file returns via a GSP, the taxpayer must enable API access once
+(per the WhiteBooks "Enable API Access" guide):
+1. Log in at **gst.gov.in** with the GSTIN's own username/password.
+2. **View Profile → Quick Links → "Manage API Access"**.
+3. **Enable API Request = Yes**, **Duration = 30 days** → **Confirm**.
+This opens a 30-day API window; after it lapses the taxpayer re-enables it (a new OTP session).
+**Key implication:** GST-return filing auth is **OTP-based** — the app authenticates with the
+taxpayer's GST-portal **username + a live OTP** (`/authentication/otprequest` → `/authentication/authtoken`),
+**not a stored password**. So the app needs (a) a per-business *GST-portal API username* field and
+(b) an **OTP-capture step at filing time**. (This is separate from e-Way Bill / e-Invoice, which
+register on ewaybillgst.gov.in / einvoice1.gst.gov.in and issue a stored API username/password.)
+
 ## Flow 3 — GST Return Filing (the SOW headline — NOT built)
 Per return, the pattern is **Save → (Submit) → Proceed → File**:
 ```
