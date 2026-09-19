@@ -154,8 +154,28 @@ export function BillForm() {
     if (totals.grand >= LARGE_INVOICE) w.push(`Large invoice value (${inr(totals.grand)}) — double-check quantities and rates.`);
     const zeroRate = lines.filter((l) => l.desc && l.rate === 0).length;
     if (zeroRate > 0) w.push(`${zeroRate} item(s) have a rate of ₹0.`);
+
+    // ── GST compliance reminders (rule-based, no external lookup) ──
+    if (direction === 'OUTGOING') {
+      // e-Way Bill: movement of goods valued over ₹50,000 (SAC 99xx = services, skipped)
+      const hasGoods = lines.some((l) => l.desc && !(l.hsn || '').trim().startsWith('99'));
+      if (totals.grand > 50000 && hasGoods) {
+        w.push('Invoice value exceeds ₹50,000 — a valid e-Way Bill is required for the movement of goods.');
+      }
+      // e-Invoice (IRN): mandatory for B2B tax invoices when turnover exceeds ₹5 Cr
+      if (invType === 'TAX' && (docType === 'INVOICE' || docType === 'CREDIT_NOTE') && party?.gstin && isValidGstin(party.gstin)) {
+        w.push('B2B tax invoice — an e-Invoice (IRN) is mandatory if your annual turnover exceeds ₹5 crore.');
+      }
+    }
+    // HSN/SAC on taxable lines
+    const taxableLines = lines.filter((l) => l.desc && (l.gst > 0 || l.rate > 0));
+    const missingHsn = taxableLines.filter((l) => !(l.hsn || '').trim()).length;
+    if (missingHsn > 0) w.push(`${missingHsn} item(s) have no HSN/SAC code — required on GST invoices.`);
+    const shortHsn = taxableLines.filter((l) => { const h = (l.hsn || '').replace(/\D/g, ''); return h.length > 0 && h.length < 4; }).length;
+    if (shortHsn > 0) w.push(`${shortHsn} item(s) have an HSN under 4 digits — use at least 4 (6 digits if turnover > ₹5 crore).`);
+
     return w;
-  }, [party, pos, dueDate, date, totals.grand, lines]);
+  }, [party, pos, dueDate, date, totals.grand, lines, direction, invType, docType]);
 
   async function save(submit: boolean) {
     setErr(''); setSaving(true);
