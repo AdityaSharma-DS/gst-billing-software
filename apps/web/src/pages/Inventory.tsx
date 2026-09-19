@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Modal } from '../components/Modal';
 import { IconSearch } from '../components/icons';
+import { HsnSearch } from '../components/HsnSearch';
 import { GST_RATES } from '../lib/gst';
 import { toast } from '../components/Toaster';
 
@@ -125,7 +126,11 @@ export function Inventory() {
           <div className="form-grid">
             <label className="span2">Item / Service Name *<input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
             <label>Barcode<input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} placeholder="Scan or type" /></label>
-            <label>HSN/SAC<input value={form.hsnSacCode} onChange={(e) => setForm({ ...form, hsnSacCode: e.target.value })} /></label>
+            <label>HSN/SAC
+              <HsnSearch value={form.hsnSacCode}
+                onChange={(c) => setForm((f) => ({ ...f, hsnSacCode: c }))}
+                onPick={(e) => setForm((f) => ({ ...f, hsnSacCode: e.code, gstRate: e.gst }))} />
+            </label>
             <label>Unit<input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="pcs / kg / hrs" /></label>
             <label>Rate (₹)<input type="number" value={form.rate} onChange={(e) => setForm({ ...form, rate: +e.target.value })} /></label>
             <label>GST %

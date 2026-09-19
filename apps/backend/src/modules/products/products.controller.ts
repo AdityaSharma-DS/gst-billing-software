@@ -21,6 +21,12 @@ export class ProductsController {
     return this.products.findByBarcode(tenantId, code);
   }
 
+  /** Search the common HSN/SAC catalog by description or code (for the HSN picker). */
+  @Get('hsn')
+  hsnSearch(@Query('q') q?: string) {
+    return this.products.searchHsn(q ?? '');
+  }
+
   @Get('import/template')
   template(@Res() res: Response) {
     res.setHeader('Content-Type', 'text/csv');

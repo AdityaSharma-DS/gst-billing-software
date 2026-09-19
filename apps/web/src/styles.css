@@ -376,6 +376,17 @@ button.quick:hover { border-color: var(--color-primary); transform: translateY(-
 .toggle-row { display: flex; align-items: flex-start; gap: var(--space-3); font-size: 13px; }
 .toggle-row input { margin-top: 3px; }
 
+/* HSN/SAC search field */
+.hsn-search { position: relative; }
+.hsn-search input { width: 100%; }
+.hsn-panel { position: absolute; top: calc(100% + 4px); left: 0; right: 0; min-width: 320px; z-index: 60; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: 0 12px 32px rgba(16,24,40,.14); max-height: 260px; overflow-y: auto; }
+.hsn-row { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-3); align-items: center; width: 100%; text-align: left; padding: var(--space-2) var(--space-3); background: var(--color-surface); border: 0; border-bottom: 1px solid var(--color-divider); cursor: pointer; font-family: var(--font-sans); }
+.hsn-row:last-child { border-bottom: 0; }
+.hsn-row:hover { background: var(--color-primary-50); }
+.hsn-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: var(--fw-semibold); color: var(--color-primary-hover); }
+.hsn-desc { font-size: 12px; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hsn-gst { font-size: 11px; color: var(--color-text-muted); }
+
 /* Settings — branding */
 .brand-row { display: flex; align-items: center; gap: var(--space-6); margin-bottom: var(--space-4); }
 .logo-box { width: 120px; height: 72px; border: 1px dashed var(--color-border); border-radius: var(--radius-md); display: grid; place-items: center; overflow: hidden; background: var(--color-bg); }

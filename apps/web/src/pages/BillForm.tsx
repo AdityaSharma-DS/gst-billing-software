@@ -9,6 +9,7 @@ import { GST_RATES } from '../lib/gst';
 import { isValidGstin, gstinStateCode } from '../lib/gstin';
 import { autoDueDate } from '../lib/dates';
 import { ItemPicker } from '../components/ItemPicker';
+import { HsnSearch } from '../components/HsnSearch';
 import { useBarcodeScanner } from '../components/useBarcodeScanner';
 import { getScannerPrefs } from '../lib/scanner';
 import { toast } from '../components/Toaster';
@@ -399,7 +400,11 @@ export function BillForm() {
           <div className="form-grid">
             <label className="span2">Item / Service Name *<input autoFocus value={ni.name} onChange={(e) => setNi({ ...ni, name: e.target.value })} /></label>
             <label>Barcode<input value={ni.barcode} onChange={(e) => setNi({ ...ni, barcode: e.target.value })} placeholder="Scan or type" /></label>
-            <label>HSN/SAC<input value={ni.hsn} onChange={(e) => setNi({ ...ni, hsn: e.target.value })} /></label>
+            <label>HSN/SAC
+              <HsnSearch value={ni.hsn}
+                onChange={(c) => setNi((n) => ({ ...n, hsn: c }))}
+                onPick={(e) => setNi((n) => ({ ...n, hsn: e.code, gst: e.gst }))} />
+            </label>
             <label>Unit<input value={ni.unit} onChange={(e) => setNi({ ...ni, unit: e.target.value })} /></label>
             <label>Rate (₹)<input type="number" value={ni.rate} onChange={(e) => setNi({ ...ni, rate: +e.target.value })} /></label>
             <label>GST %<select value={ni.gst} onChange={(e) => setNi({ ...ni, gst: +e.target.value })}>{GST_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}</select></label>

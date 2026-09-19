@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as Papa from 'papaparse';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { HSN_CATALOG } from './hsn-catalog';
 
 export interface ProductImportResult { created: number; updated: number; failed: number; errors: { row: number; message: string }[]; }
 
@@ -9,6 +10,22 @@ export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
   static readonly TEMPLATE_HEADERS = ['name', 'hsnSacCode', 'unit', 'rate', 'gstRate'];
+
+  /** Search the bundled HSN/SAC catalog by description words (all must match) or code prefix. */
+  searchHsn(q: string) {
+    const term = (q || '').trim().toLowerCase();
+    if (!term) return HSN_CATALOG.slice(0, 20);
+    const tokens = term.split(/\s+/).filter(Boolean);
+    const digits = term.replace(/\D/g, '');
+    return HSN_CATALOG
+      .filter((e) => {
+        const desc = e.description.toLowerCase();
+        const byCode = digits.length >= 2 && e.code.startsWith(digits);
+        const byDesc = tokens.every((t) => desc.includes(t));
+        return byCode || byDesc;
+      })
+      .slice(0, 25);
+  }
 
   list(tenantId: string, search?: string) {
     return this.prisma.withTenant(tenantId, (tx) =>
