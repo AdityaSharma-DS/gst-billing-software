@@ -60,11 +60,31 @@ export function BillsList({ direction, title, newLabel, onNew }: { direction: 'O
     URL.revokeObjectURL(a.href);
     toast(`${b.billNumber}.pdf downloaded (also archived on server)`);
   }
+  /** Fetch the archived invoice PDF (authenticated) as a File for sharing/download. */
+  async function pdfFile(b: Bill): Promise<File> {
+    const res = await api.get(`/bills/${b.id}/invoice.pdf`, { responseType: 'blob' });
+    return new File([res.data], `${b.billNumber}.pdf`, { type: 'application/pdf' });
+  }
   async function sendWhatsapp(b: Bill) {
     try {
       const { data } = await api.post(`/bills/${b.id}/whatsapp`, {});
-      if (data.apiSent) toast(`WhatsApp sent to ${data.to} (${data.status})`);
-      else toast(data.reason ?? 'Opening WhatsApp share…', 'info');
+      // Business API already delivered the invoice PDF as an attachment.
+      if (data.apiSent) { toast(`WhatsApp sent to ${data.to} (${data.status})`); return; }
+
+      const text: string = data.shareText ?? '';
+      const file = await pdfFile(b);
+      // Preferred: share the actual PDF file — WhatsApp receives it as an attachment, no URL.
+      if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], text }); return; }
+        catch (e: any) { if (e?.name === 'AbortError') return; } // user cancelled the share sheet
+      }
+      // Desktop fallback: download the PDF, then open WhatsApp so it can be attached manually.
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('Invoice downloaded — attach it in the WhatsApp chat', 'info');
       if (data.waLink) window.open(data.waLink, '_blank');
     } catch { toast('WhatsApp send failed', 'error'); }
   }
