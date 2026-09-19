@@ -5,15 +5,23 @@ import { decryptSecret } from '../../common/crypto/secret.util';
 
 const GST_CONFIG_KEY = 'gst_api_config';
 
-/** Platform-wide GSP account settings (WhiteBooks issues ONE pair per account). */
+type GspProduct = 'gst' | 'einvoice' | 'ewaybill';
+
+/**
+ * Platform-wide GSP account settings. WhiteBooks issues a SEPARATE Client
+ * ID/Secret per product (GST, e-Invoice, e-Way Bill). Base URL depends only on
+ * the environment (sandbox → apisandbox.whitebooks.in, production →
+ * api.whitebooks.in) and is shared across products.
+ */
 export interface GspConfig {
   provider: string;          // 'whitebooks'
   environment: string;       // 'sandbox' | 'production'
-  baseUrl: string;           // e.g. https://api.whitebooks.in
+  baseUrl: string;           // derived from environment
   email: string;             // WhiteBooks account email
-  clientId: string;
-  clientSecret: string;
   ipAddress: string;         // whitelisted public IP registered with NIC/GSP
+  gst: { clientId: string; clientSecret: string };
+  einvoice: { clientId: string; clientSecret: string };
+  ewaybill: { clientId: string; clientSecret: string };
 }
 
 /** Per-taxpayer NIC API credentials (created under the taxpayer's GST login). */
@@ -51,21 +59,45 @@ export class WhiteBooksService {
 
   // ── Configuration ──
 
+  /** Base URL for an environment (shared across products). */
+  private static baseUrlFor(environment: string): string {
+    return environment === 'production' ? 'https://api.whitebooks.in' : 'https://apisandbox.whitebooks.in';
+  }
+
   /** Resolve platform GSP config: DB (master-admin) first, env as fallback. */
   async resolveConfig(): Promise<GspConfig | null> {
     const row = await this.prisma.platformSetting.findUnique({ where: { key: GST_CONFIG_KEY } });
     const c = (row?.value as any) ?? {};
+    const environment = c.environment ?? this.config.get('GSP_ENV') ?? 'sandbox';
+    const baseUrl = (c.baseUrl || this.config.get('GSP_BASE_URL') || WhiteBooksService.baseUrlFor(environment)).replace(/\/+$/, '');
+    // Legacy single-pair fallback (older configs / env vars).
+    const legacyId = c.clientId ?? this.config.get('GSP_CLIENT_ID') ?? '';
+    const legacySecret = c.clientSecret ? decryptSecret(c.clientSecret) : (this.config.get('GSP_CLIENT_SECRET') ?? '');
+    const pair = (idKey: string, secKey: string) => ({
+      clientId: c[idKey] || legacyId,
+      clientSecret: c[secKey] ? decryptSecret(c[secKey]) : legacySecret,
+    });
     const cfg: GspConfig = {
       provider: c.provider ?? this.config.get('GSP_PROVIDER') ?? 'whitebooks',
-      environment: c.environment ?? this.config.get('GSP_ENV') ?? 'sandbox',
-      baseUrl: (c.baseUrl ?? this.config.get('GSP_BASE_URL') ?? '').replace(/\/+$/, ''),
+      environment,
+      baseUrl,
       email: c.email ?? this.config.get('GSP_EMAIL') ?? '',
-      clientId: c.clientId ?? this.config.get('GSP_CLIENT_ID') ?? '',
-      clientSecret: c.clientSecret ? decryptSecret(c.clientSecret) : (this.config.get('GSP_CLIENT_SECRET') ?? ''),
       ipAddress: c.ipAddress ?? this.config.get('GSP_IP_ADDRESS') ?? '',
+      gst: pair('gstClientId', 'gstClientSecret'),
+      einvoice: pair('einvoiceClientId', 'einvoiceClientSecret'),
+      ewaybill: pair('ewaybillClientId', 'ewaybillClientSecret'),
     };
-    const ready = cfg.baseUrl && cfg.email && cfg.clientId && cfg.clientSecret;
-    return ready ? cfg : null;
+    const anyProduct = (['gst', 'einvoice', 'ewaybill'] as GspProduct[]).some((p) => cfg[p].clientId && cfg[p].clientSecret);
+    return cfg.baseUrl && cfg.email && anyProduct ? cfg : null;
+  }
+
+  /** Credentials for a specific WhiteBooks product; throws if that product isn't configured. */
+  private productCreds(cfg: GspConfig, product: GspProduct): { clientId: string; clientSecret: string } {
+    const p = cfg[product];
+    if (!p.clientId || !p.clientSecret) {
+      throw new BadRequestException(`WhiteBooks ${product} API credentials are not set. Add the ${product} Client ID & Secret in the master panel → GST API Config.`);
+    }
+    return p;
   }
 
   /** True when platform GSP config is present AND the org has taxpayer creds. */
@@ -117,16 +149,18 @@ export class WhiteBooksService {
 
   // ── Auth ──
 
-  /** Authenticate a taxpayer and return the WhiteBooks/NIC session token. Cached. */
-  async authenticate(cfg: GspConfig, creds: GspCredentials): Promise<string> {
-    const cached = this.tokenCache.get(creds.gstin);
+  /** Authenticate a taxpayer for a product and return the session token. Cached per product+GSTIN. */
+  async authenticate(cfg: GspConfig, creds: GspCredentials, product: GspProduct): Promise<string> {
+    const cacheKey = `${product}:${creds.gstin}`;
+    const cached = this.tokenCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
 
+    const pc = this.productCreds(cfg, product);
     // email/username/password are query params; the rest are headers (per OpenAPI).
     const url = `${cfg.baseUrl}/ewaybillapi/v1.03/authenticate?` +
       this.qs({ email: cfg.email, username: creds.username, password: creds.password });
     const res = await this.http('GET', url, {
-      ip_address: cfg.ipAddress, client_id: cfg.clientId, client_secret: cfg.clientSecret, gstin: creds.gstin,
+      ip_address: cfg.ipAddress, client_id: pc.clientId, client_secret: pc.clientSecret, gstin: creds.gstin,
     });
 
     const data = res?.data ?? res;
@@ -135,18 +169,21 @@ export class WhiteBooksService {
 
     // Sandbox tokens ~1h, production ~6h. Cache conservatively.
     const ttl = (cfg.environment === 'production' ? 6 * 60 : 55) * 60_000;
-    this.tokenCache.set(creds.gstin, { token, expiresAt: Date.now() + ttl });
+    this.tokenCache.set(cacheKey, { token, expiresAt: Date.now() + ttl });
     return token;
   }
 
-  /** Force a fresh auth (used by the admin "Test connection" button). */
-  async testConnection(org: { gstin?: string | null; gspUsername?: string | null; gspPassword?: string | null }): Promise<{ ok: boolean; environment: string; message: string }> {
+  /** Force a fresh auth (used by the admin "Test connection" button). Defaults to the e-Way Bill product. */
+  async testConnection(
+    org: { gstin?: string | null; gspUsername?: string | null; gspPassword?: string | null },
+    product: GspProduct = 'ewaybill',
+  ): Promise<{ ok: boolean; environment: string; message: string }> {
     const cfg = await this.resolveConfig();
-    if (!cfg) throw new BadRequestException('GSP is not configured. Set Client ID/Secret, account email and base URL in the master-admin GST config.');
+    if (!cfg) throw new BadRequestException('GSP is not configured. Set the product Client ID/Secret and account email in the master panel → GST API Config.');
     const creds = this.creds(org);
-    this.tokenCache.delete(creds.gstin);
-    await this.authenticate(cfg, creds);
-    return { ok: true, environment: cfg.environment, message: `Authenticated ${creds.gstin} via ${cfg.provider} (${cfg.environment}).` };
+    this.tokenCache.delete(`${product}:${creds.gstin}`);
+    await this.authenticate(cfg, creds, product);
+    return { ok: true, environment: cfg.environment, message: `Authenticated ${creds.gstin} for ${product} via ${cfg.provider} (${cfg.environment}).` };
   }
 
   // ── e-Way Bill ──
@@ -159,11 +196,12 @@ export class WhiteBooksService {
     const cfg = await this.resolveConfig();
     if (!cfg) throw new BadRequestException('GSP is not configured.');
     const creds = this.creds(org);
-    const token = await this.authenticate(cfg, creds);
+    const pc = this.productCreds(cfg, 'ewaybill');
+    const token = await this.authenticate(cfg, creds, 'ewaybill');
 
     const url = `${cfg.baseUrl}/ewaybillapi/v1.03/ewayapi/genewaybill?` + this.qs({ email: cfg.email });
     const res = await this.http('POST', url, {
-      ip_address: cfg.ipAddress, client_id: cfg.clientId, client_secret: cfg.clientSecret,
+      ip_address: cfg.ipAddress, client_id: pc.clientId, client_secret: pc.clientSecret,
       gstin: creds.gstin, 'auth-token': token,
     }, payload);
 
@@ -186,11 +224,12 @@ export class WhiteBooksService {
     const cfg = await this.resolveConfig();
     if (!cfg) throw new BadRequestException('GSP is not configured.');
     const creds = this.creds(org);
-    const token = await this.authenticate(cfg, creds);
+    const pc = this.productCreds(cfg, 'ewaybill');
+    const token = await this.authenticate(cfg, creds, 'ewaybill');
     const url = `${cfg.baseUrl}/ewaybillapi/v1.03/ewayapi/getgstindetails?` +
       this.qs({ email: cfg.email, GSTIN: lookupGstin });
     const res = await this.http('GET', url, {
-      ip_address: cfg.ipAddress, client_id: cfg.clientId, client_secret: cfg.clientSecret,
+      ip_address: cfg.ipAddress, client_id: pc.clientId, client_secret: pc.clientSecret,
       gstin: creds.gstin, 'auth-token': token,
     });
     return res?.data ?? res;
@@ -206,12 +245,13 @@ export class WhiteBooksService {
     const cfg = await this.resolveConfig();
     if (!cfg) throw new BadRequestException('GSP is not configured.');
     const creds = this.creds(org);
-    const token = await this.authenticate(cfg, creds);
+    const pc = this.productCreds(cfg, 'einvoice');
+    const token = await this.authenticate(cfg, creds, 'einvoice');
 
     const url = `${cfg.baseUrl}/einvoice/type/GENERATE/version/V1_03?` +
       this.qs({ email: cfg.email, username: creds.username });
     const res = await this.http('POST', url, {
-      ip_address: cfg.ipAddress, client_id: cfg.clientId, client_secret: cfg.clientSecret,
+      ip_address: cfg.ipAddress, client_id: pc.clientId, client_secret: pc.clientSecret,
       gstin: creds.gstin, 'auth-token': token,
     }, payload);
 

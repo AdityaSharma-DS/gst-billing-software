@@ -3,7 +3,19 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from './adminApi';
 import { toast } from '../components/Toaster';
 
-type Cfg = Record<string, string>;
+type Cfg = Record<string, any>;
+
+const BASE_URL: Record<string, string> = {
+  sandbox: 'https://apisandbox.whitebooks.in',
+  production: 'https://api.whitebooks.in',
+};
+
+// WhiteBooks issues a separate Client ID/Secret per product.
+const PRODUCTS: { key: string; title: string; idHint: string }[] = [
+  { key: 'gst', title: 'GST APIs (returns, GSTR-2B)', idHint: 'GSTS… (sandbox) / GSTP… (production)' },
+  { key: 'einvoice', title: 'e-Invoice (IRN)', idHint: 'EINS… (sandbox) / EINP… (production)' },
+  { key: 'ewaybill', title: 'e-Way Bill', idHint: 'EWBS… (sandbox) / EWBP… (production)' },
+];
 
 export function AdminGstConfig() {
   const qc = useQueryClient();
@@ -13,7 +25,8 @@ export function AdminGstConfig() {
   const { data } = useQuery({ queryKey: ['admin-gst-config'], queryFn: async () => (await adminApi.get<Cfg>('/gst-config')).data });
   useEffect(() => { if (data) setForm(data); }, [data]);
 
-  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const env = form.environment ?? 'sandbox';
 
   async function save() {
     setSaving(true);
@@ -35,55 +48,62 @@ export function AdminGstConfig() {
       <div className="card">
         <h3 className="card-title">GSP Account — WhiteBooks</h3>
         <p className="muted small" style={{ marginTop: 0 }}>
-          WhiteBooks (developer.whitebooks.in) is the GST Suvidha Provider. One Client ID/Secret pair covers
-          e-Invoice, e-Way Bill, GSTR filing, GSTR-2B and Payment APIs. The GSP wraps NIC's encryption, so the
-          app sends plain JSON. Each taxpayer's own NIC username/password is entered per-organisation under
-          Settings → GST APIs.
+          WhiteBooks (developer.whitebooks.in) is the GST Suvidha Provider. It issues a <b>separate Client ID &amp;
+          Secret per product</b> (GST, e-Invoice, e-Way Bill), each with sandbox &amp; production keys. Enter the pairs
+          below. Each taxpayer's own NIC username/password/GSTIN is set per-organisation under Settings → GST APIs.
         </p>
         <div className="seg-row" style={{ marginTop: 4 }}>
-          {['sandbox', 'production'].map((env) => (
-            <button key={env} className={`seg ${form.environment === env ? 'seg--active' : ''}`} onClick={() => set('environment', env)}>{env[0].toUpperCase() + env.slice(1)}</button>
+          {['sandbox', 'production'].map((e) => (
+            <button key={e} className={`seg ${env === e ? 'seg--active' : ''}`} onClick={() => set('environment', e)}>{e[0].toUpperCase() + e.slice(1)}</button>
           ))}
         </div>
         <p className="muted small" style={{ marginTop: 8 }}>
-          Token TTL: 1 hour (sandbox) / 6 hours (production). Use the <b>sandbox</b> credentials (Client ID starts
-          with <code>GSTS…</code>) for testing against the NIC sandbox GSTINs; switch to <b>production</b>
-          (<code>GSTP…</code>) only when going live.
+          Base URL for <b>{env}</b>: <code>{BASE_URL[env]}</code> (auto). Sandbox uses default OTP <code>575757</code> and the
+          test GSTINs provided by WhiteBooks. Token TTL is ~1h (sandbox) / ~6h (production).
         </p>
-      </div>
-
-      <div className="card">
-        <h3 className="card-title">Credentials</h3>
-        <div className="form-grid form-grid--2">
-          <label className="span2">API Base URL
-            <input value={form.baseUrl ?? ''} onChange={(e) => set('baseUrl', e.target.value)} placeholder="https://api.whitebooks.in" />
-          </label>
+        <div className="form-grid form-grid--2" style={{ marginTop: 8 }}>
           <label>Account Email
             <input value={form.email ?? ''} onChange={(e) => set('email', e.target.value)} placeholder="WhiteBooks account email" />
           </label>
           <label>Whitelisted IP Address
             <input value={form.ipAddress ?? ''} onChange={(e) => set('ipAddress', e.target.value)} placeholder="public IP registered with NIC" />
           </label>
-          <label>Client ID
-            <input value={form.clientId ?? ''} onChange={(e) => set('clientId', e.target.value)} placeholder="GSTS… (sandbox) / GSTP… (production)" />
-          </label>
-          <label>Client Secret
-            <input type="password" value={form.clientSecret ?? ''} onChange={(e) => set('clientSecret', e.target.value)} placeholder={form.clientSecretSet ? 'unchanged — leave to keep' : ''} />
-          </label>
         </div>
         <p className="muted small" style={{ marginTop: 8 }}>
-          The client secret is stored server-side and never sent back to this screen. Leave it as the masked
-          value to keep the saved secret.
+          ⚠️ NIC requires calls from a whitelisted <b>static IP</b>. Serverless (Vercel) egress IPs are dynamic — route
+          GSP calls through a fixed-IP host if production calls fail.
         </p>
       </div>
+
+      {PRODUCTS.map((p) => {
+        const idKey = `${p.key}ClientId`;
+        const secKey = `${p.key}ClientSecret`;
+        return (
+          <div className="card" key={p.key}>
+            <h3 className="card-title">{p.title}</h3>
+            <div className="form-grid form-grid--2">
+              <label>Client ID
+                <input value={form[idKey] ?? ''} onChange={(e) => set(idKey, e.target.value)} placeholder={p.idHint} autoComplete="off" />
+              </label>
+              <label>Client Secret
+                <input type="password" value={form[secKey] ?? ''} onChange={(e) => set(secKey, e.target.value)}
+                  placeholder={form[`${secKey}Set`] ? 'unchanged — leave to keep' : ''} autoComplete="new-password" />
+              </label>
+            </div>
+          </div>
+        );
+      })}
 
       <div className="card">
         <h3 className="card-title">Tax Rates (optional)</h3>
         <div className="form-grid form-grid--2">
           <label>FastGST URL<input value={form.fastGstUrl ?? ''} onChange={(e) => set('fastGstUrl', e.target.value)} /></label>
-          <label>FastGST API Key<input type="password" value={form.fastGstApiKey ?? ''} onChange={(e) => set('fastGstApiKey', e.target.value)} /></label>
+          <label>FastGST API Key<input type="password" value={form.fastGstApiKey ?? ''} onChange={(e) => set('fastGstApiKey', e.target.value)}
+            placeholder={form.fastGstApiKeySet ? 'unchanged — leave to keep' : ''} /></label>
         </div>
       </div>
+
+      <p className="muted small">Secrets are stored encrypted server-side and never sent back to this screen — leave a masked field to keep the saved value.</p>
     </section>
   );
 }

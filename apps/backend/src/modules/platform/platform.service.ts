@@ -107,48 +107,26 @@ export class PlatformService {
   }
 
   // ── GST API configuration (platform-wide) ──
-  async getGstConfig() {
-    const row = await this.prisma.admin.platformSetting.findUnique({ where: { key: GST_CONFIG_KEY } });
-    const defaults = {
-      // WhiteBooks GSP — one Client ID/Secret pair covers e-Invoice, e-Way Bill,
-      // GSTR filing, GSTR-2B and Payment APIs.
-      provider: 'whitebooks',
-      environment: 'sandbox',            // sandbox | production
-      baseUrl: 'https://api.whitebooks.in',
-      email: '',                         // WhiteBooks account email
-      clientId: '',                      // sandbox GSTS... / production GSTP...
-      clientSecret: '',
-      ipAddress: '',                     // public IP whitelisted with NIC/GSP
-      fastGstUrl: '', fastGstApiKey: '',
-    };
-    // Merge so newly-added keys appear even for configs saved under the old shape.
-    const cfg: any = { ...defaults, ...((row?.value as object) ?? {}) };
-    // Decrypt the stored client secret for internal use (masked before it ever
-    // reaches the browser — see getGstConfigMasked).
-    cfg.clientSecret = decryptSecret(cfg.clientSecret);
-    return cfg;
-  }
+  // WhiteBooks issues a SEPARATE Client ID/Secret per product (GST, e-Invoice,
+  // e-Way Bill), each with sandbox + production. `clientId`/`clientSecret` are
+  // kept as a legacy single-pair fallback. Base URL is derived from environment.
+  private readonly GST_DEFAULTS = {
+    provider: 'whitebooks',
+    environment: 'sandbox',            // sandbox | production
+    baseUrl: '',                       // blank → derived from environment
+    email: '',                         // WhiteBooks account email
+    ipAddress: '',                     // public IP whitelisted with NIC/GSP
+    gstClientId: '', gstClientSecret: '',            // GSTS… / GSTP…
+    einvoiceClientId: '', einvoiceClientSecret: '',  // EINS… / EINP…
+    ewaybillClientId: '', ewaybillClientSecret: '',  // EWBS… / EWBP…
+    clientId: '', clientSecret: '',    // legacy single-pair fallback
+    fastGstUrl: '', fastGstApiKey: '',
+  };
+  private readonly GST_SECRETS = ['gstClientSecret', 'einvoiceClientSecret', 'ewaybillClientSecret', 'clientSecret', 'fastGstApiKey'];
 
-  /** Never expose the client secret to the browser; report only whether it's set. */
-  async getGstConfigMasked() {
-    const cfg: any = await this.getGstConfig();
-    return { ...cfg, clientSecret: cfg.clientSecret ? '********' : '', clientSecretSet: !!cfg.clientSecret };
-  }
-
-  async setGstConfig(value: any) {
-    const existing: any = await this.getGstConfig();
-    // If the UI sends the masked placeholder, keep the stored secret.
-    const merged = { ...existing, ...value };
-    if (!value?.clientSecret || value.clientSecret === '********') merged.clientSecret = existing.clientSecret ?? '';
-    // Encrypt the client secret at rest (existing is already decrypted plaintext).
-    merged.clientSecret = encryptSecret(merged.clientSecret);
-    await this.prisma.admin.platformSetting.upsert({
-      where: { key: GST_CONFIG_KEY },
-      create: { key: GST_CONFIG_KEY, value: merged },
-      update: { value: merged },
-    });
-    return { saved: true };
-  }
+  getGstConfig() { return this.getSection(GST_CONFIG_KEY, this.GST_DEFAULTS, this.GST_SECRETS); }
+  async getGstConfigMasked() { return this.maskSection(await this.getGstConfig(), this.GST_SECRETS); }
+  setGstConfig(value: any) { return this.setSection(GST_CONFIG_KEY, value, this.GST_DEFAULTS, this.GST_SECRETS); }
 
   // ── Generic platform-settings section (secret fields encrypted at rest) ──
   private async getSection(key: string, defaults: Record<string, any>, secretFields: string[]) {
