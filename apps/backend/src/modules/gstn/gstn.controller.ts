@@ -1,7 +1,6 @@
 import { BadRequestException, Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { CurrentTenant } from '../../common/tenancy/tenant.decorator';
-import { PrismaService } from '../../common/prisma/prisma.service';
 import { WhiteBooksService } from './whitebooks.service';
 
 const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
@@ -34,20 +33,22 @@ function normalize(raw: any) {
 @Controller('gstn')
 @UseGuards(JwtAuthGuard)
 export class GstnController {
-  constructor(private readonly prisma: PrismaService, private readonly wb: WhiteBooksService) {}
+  constructor(private readonly wb: WhiteBooksService) {}
 
   /**
-   * Look up a counterparty GSTIN's registered details via the GSP.
-   * Requires the tenant's org to have NIC API credentials and the platform GSP
-   * config to be set. The frontend falls back to the offline state-from-code
-   * derivation when this can't run.
+   * Look up a counterparty GSTIN's registered details via the GST API's
+   * "Search Taxpayer" (needs only the platform GST Client ID/Secret — no
+   * per-taxpayer login). The frontend falls back to the offline
+   * state-from-code derivation when this can't run.
    */
   @Get('gstin/:gstin')
-  async lookup(@CurrentTenant() tenantId: string, @Param('gstin') gstin: string) {
+  async lookup(@CurrentTenant() _tenantId: string, @Param('gstin') gstin: string) {
     const g = (gstin || '').toUpperCase().trim();
     if (!GSTIN_RE.test(g)) throw new BadRequestException('Invalid GSTIN format');
-    const org = await this.prisma.withTenant(tenantId, (tx) => tx.organization.findFirst());
-    const raw = await this.wb.getGstinDetails(org as any, g);
-    return normalize(raw);
+    const raw = await this.wb.searchTaxpayer(g);
+    const out = normalize(raw);
+    out.stateName = out.stateCode;       // the API returns the state *name* in stcd
+    out.stateCode = g.slice(0, 2);       // authoritative 2-digit code from the GSTIN
+    return out;
   }
 }

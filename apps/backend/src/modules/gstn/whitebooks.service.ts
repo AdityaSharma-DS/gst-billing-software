@@ -109,6 +109,20 @@ export class WhiteBooksService {
     return p;
   }
 
+  /**
+   * Search a taxpayer's registered details by GSTIN via the GST API
+   * (GET /public/search). Needs ONLY the GST product Client ID/Secret + account
+   * email — no per-taxpayer NIC login or OTP. Ideal for counterparty auto-fill.
+   */
+  async searchTaxpayer(gstin: string): Promise<any> {
+    const cfg = await this.resolveConfig();
+    if (!cfg) throw new BadRequestException('GSP is not configured. Set the GST Client ID/Secret and account email in the master panel → GST API Config.');
+    const pc = this.productCreds(cfg, 'gst');
+    const url = `${cfg.baseUrl}/public/search?` + this.qs({ email: cfg.email, gstin });
+    const res = await this.http('GET', url, { client_id: pc.clientId, client_secret: pc.clientSecret, ip_address: cfg.ipAddress });
+    return res?.data ?? res;
+  }
+
   /** True when platform GSP config is present AND the org has taxpayer creds. */
   async isConfigured(org: { gstin?: string | null; gspUsername?: string | null; gspPassword?: string | null }): Promise<boolean> {
     const cfg = await this.resolveConfig();
