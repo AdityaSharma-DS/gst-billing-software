@@ -403,6 +403,36 @@ export function Settings() {
         </p>
       </div>
 
+      {/* GST return filing — auto-file GSTR-1 / GSTR-3B via the GST portal */}
+      <div className="card">
+        <h3 className="card-title">GST Return Filing — Auto-file</h3>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Let DONICY file your GSTR-1 / GSTR-3B for this GSTIN. This is a one-time setup per taxpayer.
+          Every filing is still authorised by a one-time password (OTP) sent to your registered mobile —
+          no portal password is ever stored.
+        </p>
+        <ol className="muted small" style={{ margin: '0 0 12px 18px', lineHeight: 1.7 }}>
+          <li>Sign in at <a href="https://www.gst.gov.in" target="_blank" rel="noreferrer">gst.gov.in</a> → <b>My Profile → Manage API Access</b> and turn <b>API access</b> on (choose the longest duration).</li>
+          <li>Enter your GST portal <b>username</b> below and tick <b>API access enabled</b>.</li>
+          <li>When you file, DONICY requests an OTP → you enter it → the return is submitted and the ARN is saved.</li>
+        </ol>
+        <div className="form-grid form-grid--2">
+          <label>GST Portal Username
+            <input value={form.gstApiUsername ?? ''} onChange={(e) => set('gstApiUsername', e.target.value)} placeholder="your gst.gov.in username" autoComplete="off" />
+          </label>
+          <label>API Access Valid Till (optional)
+            <input type="date" value={(form.gstApiAccessValidTill ?? '').slice(0, 10)} onChange={(e) => set('gstApiAccessValidTill', e.target.value)} />
+          </label>
+          <label className="checkbox span2">
+            <input type="checkbox" checked={!!form.gstApiAccessEnabled} onChange={(e) => set('gstApiAccessEnabled', e.target.checked)} />
+            API access enabled on the GST portal (My Profile → Manage API Access)
+          </label>
+        </div>
+        <p className="muted small" style={{ marginTop: 8 }}>
+          Portal API access expires periodically — if filing starts failing, re-enable it at gst.gov.in and update the date above.
+        </p>
+      </div>
+
       {/* Bank details */}
       <div className="card">
         <h3 className="card-title">Bank Details (shown on invoices)</h3>

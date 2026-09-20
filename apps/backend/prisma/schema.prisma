@@ -71,6 +71,12 @@ model Organization {
   // user created under the taxpayer's GST login (distinct from portal login).
   gspUsername       String?
   gspPassword       String?  // TODO: encrypt at rest before production
+  // GST return filing (GSTR-1/3B) auto-file via the GSP. Filing authenticates
+  // with the taxpayer's gst.gov.in username + an OTP each time (no password
+  // stored). The taxpayer must first enable "API Access" on the GST portal.
+  gstApiUsername        String?   // gst.gov.in username used for the filing OTP auth
+  gstApiAccessEnabled   Boolean   @default(false) // taxpayer enabled API Access on the portal
+  gstApiAccessValidTill DateTime? // when the portal API-access session lapses (re-enable after)
   // Branding
   logoUrl       String?
   addressLine1  String?

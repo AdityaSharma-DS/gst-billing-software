@@ -10,6 +10,7 @@ const EDITABLE = [
   'addressLine1', 'addressLine2', 'city', 'state', 'stateCode', 'pincode', 'email', 'phone',
   'bankAccountName', 'bankName', 'bankAccountNumber', 'bankBranch', 'bankIfsc', 'upiId', 'defaultTerms',
   'gspUsername', 'gspPassword',
+  'gstApiUsername', 'gstApiAccessEnabled', 'gstApiAccessValidTill',
 ] as const;
 
 @Injectable()
@@ -44,6 +45,9 @@ export class OrganizationService {
     if (patch.gspPassword === '********') delete patch.gspPassword;
     // Encrypt the taxpayer's NIC password at rest before it hits the DB.
     else if (patch.gspPassword !== undefined) patch.gspPassword = encryptSecret(patch.gspPassword);
+    // Coerce the GST API-access fields (the client sends a boolean and an ISO/empty string).
+    if (patch.gstApiAccessEnabled !== undefined) patch.gstApiAccessEnabled = !!patch.gstApiAccessEnabled;
+    if (patch.gstApiAccessValidTill !== undefined) patch.gstApiAccessValidTill = patch.gstApiAccessValidTill ? new Date(patch.gstApiAccessValidTill) : null;
     await this.prisma.withTenant(tenantId, (tx) => tx.organization.update({ where: { id: org.id }, data: patch }));
     return this.get(tenantId);
   }
