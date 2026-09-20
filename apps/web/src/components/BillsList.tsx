@@ -71,30 +71,18 @@ export function BillsList({ direction, title, newLabel, onNew }: { direction: 'O
       // Business API already delivered the invoice PDF as an attachment.
       if (data.apiSent) { toast(`WhatsApp sent to ${data.to} (${data.status})`); return; }
 
-      const text: string = data.shareText ?? '';
+      // WhatsApp can't take a file AND pre-filled text in one web action, and it drops
+      // the caption for shared documents. So download the PDF (ready to attach) and open
+      // WhatsApp with the message already typed in the chat box; tap 📎 to attach the PDF.
       const file = await pdfFile(b);
-      // WhatsApp usually drops the shared text when a document is attached, so copy
-      // the message too — it can be pasted as the caption / sent in the same chat.
-      try { await navigator.clipboard.writeText(text); } catch {}
-
-      // Preferred: share the actual PDF file — WhatsApp receives it as an attachment, no URL.
-      const withText = { files: [file], text, title: file.name };
-      const canBoth = typeof navigator.canShare === 'function' && navigator.canShare(withText);
-      const canFile = typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
-      if (canBoth || canFile) {
-        try {
-          await navigator.share(canBoth ? withText : { files: [file], title: file.name });
-          toast('Message copied — paste it as the caption if WhatsApp didn’t keep it', 'info');
-          return;
-        } catch (e: any) { if (e?.name === 'AbortError') return; } // user cancelled the share sheet
-      }
-      // Desktop fallback: download the PDF, then open WhatsApp (message pre-filled) to attach it.
       const a = document.createElement('a');
       a.href = URL.createObjectURL(file);
       a.download = file.name;
       a.click();
       URL.revokeObjectURL(a.href);
-      toast('Invoice downloaded & message copied — attach the PDF in the chat', 'info');
+      // Also copy the message, so it can be pasted as the document caption if preferred.
+      try { await navigator.clipboard.writeText(data.shareText ?? ''); } catch {}
+      toast('Invoice downloaded — message ready in WhatsApp; tap 📎 to attach the PDF', 'info');
       if (data.waLink) window.open(data.waLink, '_blank');
     } catch { toast('WhatsApp send failed', 'error'); }
   }
