@@ -73,18 +73,28 @@ export function BillsList({ direction, title, newLabel, onNew }: { direction: 'O
 
       const text: string = data.shareText ?? '';
       const file = await pdfFile(b);
+      // WhatsApp usually drops the shared text when a document is attached, so copy
+      // the message too — it can be pasted as the caption / sent in the same chat.
+      try { await navigator.clipboard.writeText(text); } catch {}
+
       // Preferred: share the actual PDF file — WhatsApp receives it as an attachment, no URL.
-      if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
-        try { await navigator.share({ files: [file], text }); return; }
-        catch (e: any) { if (e?.name === 'AbortError') return; } // user cancelled the share sheet
+      const withText = { files: [file], text, title: file.name };
+      const canBoth = typeof navigator.canShare === 'function' && navigator.canShare(withText);
+      const canFile = typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
+      if (canBoth || canFile) {
+        try {
+          await navigator.share(canBoth ? withText : { files: [file], title: file.name });
+          toast('Message copied — paste it as the caption if WhatsApp didn’t keep it', 'info');
+          return;
+        } catch (e: any) { if (e?.name === 'AbortError') return; } // user cancelled the share sheet
       }
-      // Desktop fallback: download the PDF, then open WhatsApp so it can be attached manually.
+      // Desktop fallback: download the PDF, then open WhatsApp (message pre-filled) to attach it.
       const a = document.createElement('a');
       a.href = URL.createObjectURL(file);
       a.download = file.name;
       a.click();
       URL.revokeObjectURL(a.href);
-      toast('Invoice downloaded — attach it in the WhatsApp chat', 'info');
+      toast('Invoice downloaded & message copied — attach the PDF in the chat', 'info');
       if (data.waLink) window.open(data.waLink, '_blank');
     } catch { toast('WhatsApp send failed', 'error'); }
   }
