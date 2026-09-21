@@ -1,7 +1,16 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { StorageService } from '../../common/storage/storage.service';
+import { WhiteBooksService } from '../gstn/whitebooks.service';
 import { isValidGstin } from './gstin.util';
+
+/** In-flight portal-filing session (login token + saved-return checksum), kept
+ *  server-side and keyed by the GSP transaction id. Short-lived. */
+interface FilingSession {
+  txn: string; authToken: string; gstin: string; gstUsername: string;
+  retPeriod: string; returnType: 'GSTR1' | 'GSTR3B'; returnId: string;
+  saveResp?: any; expiresAt: number;
+}
 
 type ReturnType = 'GSTR1' | 'GSTR2B' | 'GSTR3B' | 'GSTR4' | 'GSTR5' | 'GSTR6' | 'GSTR7' | 'GSTR8' | 'GSTR9';
 
@@ -21,7 +30,13 @@ const monthRange = (period: string) => {
  */
 @Injectable()
 export class ReturnsService {
-  constructor(private readonly prisma: PrismaService, private readonly storage: StorageService) {}
+  private filingSessions = new Map<string, FilingSession>();
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+    private readonly gsp: WhiteBooksService,
+  ) {}
 
   list(tenantId: string) {
     return this.prisma.withTenant(tenantId, (tx) => tx.gstReturn.findMany({ orderBy: { createdAt: 'desc' } }));
@@ -72,6 +87,74 @@ export class ReturnsService {
     return this.prisma.withTenant(tenantId, (tx) =>
       tx.gstReturn.update({ where: { id }, data: { status: 'FILED', filedAt: new Date(), arn: arn || `ARN${toFp(ret.period)}${String(Date.now()).slice(-8)}` } }),
     );
+  }
+
+  // ── Portal filing (GSTR-1 / GSTR-3B) via the GSP — OTP + EVC ──
+
+  /** Load the org and confirm it's set up for return filing. */
+  private async filingCreds(tenantId: string) {
+    const org = await this.prisma.withTenant(tenantId, (tx) => tx.organization.findFirst());
+    if (!org?.gstin) throw new BadRequestException('Set your organization GSTIN first (Settings → GST & Tax).');
+    if (!org.gstApiUsername) throw new BadRequestException('Enter your GST portal username (Settings → GST Return Filing).');
+    if (!org.gstApiAccessEnabled) throw new BadRequestException('Enable API Access on the GST portal, then tick it in Settings → GST Return Filing.');
+    return { gstin: org.gstin, gstUsername: org.gstApiUsername };
+  }
+
+  private async filingReturn(tenantId: string, id: string) {
+    const ret = await this.prisma.withTenant(tenantId, (tx) => tx.gstReturn.findUnique({ where: { id } }));
+    if (!ret) throw new NotFoundException('Return not found');
+    if (ret.returnType !== 'GSTR1' && ret.returnType !== 'GSTR3B') throw new BadRequestException('Only GSTR-1 and GSTR-3B can be filed through the portal here.');
+    if (ret.status === 'FILED') throw new BadRequestException('This return is already filed.');
+    if (ret.status === 'ERROR') throw new BadRequestException('Fix the validation errors and regenerate before filing.');
+    return ret;
+  }
+
+  private session(txn: string): FilingSession {
+    const s = this.filingSessions.get(txn);
+    if (!s || s.expiresAt < Date.now()) { this.filingSessions.delete(txn); throw new BadRequestException('Filing session expired — start again.'); }
+    return s;
+  }
+
+  /** Step 1 — request the login OTP for portal filing. */
+  async startFiling(tenantId: string, id: string) {
+    const ret = await this.filingReturn(tenantId, id);
+    const { gstin, gstUsername } = await this.filingCreds(tenantId);
+    const { txn, message } = await this.gsp.gstOtpRequest(gstin, gstUsername);
+    for (const [k, v] of this.filingSessions) if (v.expiresAt < Date.now()) this.filingSessions.delete(k);
+    this.filingSessions.set(txn, {
+      txn, authToken: '', gstin, gstUsername, retPeriod: toFp(ret.period),
+      returnType: ret.returnType as 'GSTR1' | 'GSTR3B', returnId: id, expiresAt: Date.now() + 15 * 60_000,
+    });
+    return { txn, message, returnType: ret.returnType, period: ret.period, otpStep: 'login' as const };
+  }
+
+  /** Step 2 — verify the login OTP, save the return on the portal, and send the EVC OTP. */
+  async verifyFiling(tenantId: string, id: string, txn: string, otp: string) {
+    const s = this.session(txn);
+    if (s.returnId !== id) throw new BadRequestException('Session does not match this return.');
+    const auth = await this.gsp.gstAuthToken(s.gstin, s.gstUsername, otp, s.txn);
+    s.authToken = auth.authToken;
+    // Re-key the session if the GSP handed back a new txn.
+    if (auth.txn !== s.txn) { this.filingSessions.delete(s.txn); s.txn = auth.txn; this.filingSessions.set(s.txn, s); }
+
+    const ret = await this.prisma.withTenant(tenantId, (tx) => tx.gstReturn.findUnique({ where: { id } }));
+    const buf = ret?.jsonUrl ? await this.storage.readByUrl(ret.jsonUrl) : null;
+    if (!buf) throw new BadRequestException('Generated JSON not found — regenerate the return.');
+    const payload = JSON.parse(buf.toString('utf-8'));
+    s.saveResp = await this.gsp.gstReturnSave(s.returnType, s.gstin, s.gstUsername, s.retPeriod, s.txn, s.authToken, payload);
+    const evc = await this.gsp.gstOtpForEvc(s.gstin, s.gstUsername, s.txn, s.authToken, s.returnType);
+    return { txn: s.txn, message: evc.message, otpStep: 'evc' as const };
+  }
+
+  /** Step 3 — file the return with the EVC OTP and record the ARN. */
+  async confirmFiling(tenantId: string, id: string, txn: string, evcOtp: string) {
+    const s = this.session(txn);
+    if (s.returnId !== id) throw new BadRequestException('Session does not match this return.');
+    const chksum = s.saveResp?.chksum ?? s.saveResp?.data?.chksum;
+    const filePayload: Record<string, unknown> = { gstin: s.gstin, ret_period: s.retPeriod, ...(chksum ? { chksum } : {}) };
+    const { arn } = await this.gsp.gstReturnFileEvc(s.returnType, s.gstin, s.gstUsername, s.retPeriod, evcOtp, s.txn, s.authToken, filePayload);
+    this.filingSessions.delete(s.txn);
+    return this.markFiled(tenantId, id, arn);
   }
 
   // ── builders ──

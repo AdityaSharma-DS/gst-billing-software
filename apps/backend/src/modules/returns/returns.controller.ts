@@ -46,4 +46,27 @@ export class ReturnsController {
   markFiled(@CurrentTenant() tenantId: string, @Param('id') id: string, @Body() body: { arn?: string }) {
     return this.returns.markFiled(tenantId, id, body?.arn);
   }
+
+  // ── Portal filing (OTP + EVC) ──
+
+  /** Step 1 — request the login OTP. */
+  @Post(':id/file/start')
+  @Roles('ADMIN', 'ACCOUNTANT')
+  startFiling(@CurrentTenant() tenantId: string, @Param('id') id: string) {
+    return this.returns.startFiling(tenantId, id);
+  }
+
+  /** Step 2 — verify the login OTP, save the return, and trigger the EVC OTP. */
+  @Post(':id/file/verify')
+  @Roles('ADMIN', 'ACCOUNTANT')
+  verifyFiling(@CurrentTenant() tenantId: string, @Param('id') id: string, @Body() body: { txn: string; otp: string }) {
+    return this.returns.verifyFiling(tenantId, id, body?.txn, body?.otp);
+  }
+
+  /** Step 3 — file with the EVC OTP and record the ARN. */
+  @Post(':id/file/confirm')
+  @Roles('ADMIN', 'ACCOUNTANT')
+  confirmFiling(@CurrentTenant() tenantId: string, @Param('id') id: string, @Body() body: { txn: string; evcOtp: string }) {
+    return this.returns.confirmFiling(tenantId, id, body?.txn, body?.evcOtp);
+  }
 }

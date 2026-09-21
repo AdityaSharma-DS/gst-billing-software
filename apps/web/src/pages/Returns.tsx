@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { toast } from '../components/Toaster';
+import { Modal } from '../components/Modal';
 
 type MainTab = 'GSTR-1' | 'GSTR-3B' | 'GSTR-4' | 'GSTR-9' | 'GSTR-2B Reconciliation' | 'TDS/TCS Report';
 type SubTab = 'B2B' | 'B2CL' | 'B2CS' | 'CDNR' | 'HSN';
@@ -34,6 +35,7 @@ export function Returns() {
   const [tab, setTab] = useState<MainTab>('GSTR-1');
   const [sub, setSub] = useState<SubTab>('B2B');
   const [period, setPeriod] = useState(() => recentPeriods()[0]);
+  const [fileTarget, setFileTarget] = useState<GstReturn | null>(null);
 
   const { data: returns = [] } = useQuery({ queryKey: ['returns'], queryFn: async () => (await api.get<GstReturn[]>('/returns')).data });
   const { data: compliance = [] } = useQuery({ queryKey: ['compliance'], queryFn: async () => (await api.get<ComplianceRow[]>('/returns/compliance')).data });
@@ -107,7 +109,9 @@ export function Returns() {
             <div className="tabs-actions">
               <button className="btn-ghost" disabled={generate.isPending} onClick={() => generate.mutate()}>{generate.isPending ? 'Generating…' : 'Generate'}</button>
               {current && <button className="btn-ghost" onClick={() => downloadJson(current.id)}>Download JSON</button>}
-              {current && current.status !== 'FILED' && <button className="btn-primary" onClick={() => markFiled.mutate(current.id)}>Mark Filed</button>}
+              {current && current.status === 'GENERATED' && (tab === 'GSTR-1' || tab === 'GSTR-3B') &&
+                <button className="btn-primary" onClick={() => setFileTarget(current)}>File on Portal</button>}
+              {current && current.status !== 'FILED' && <button className="btn-ghost" onClick={() => markFiled.mutate(current.id)}>Mark Filed</button>}
               {current?.status === 'FILED' && <span className="badge badge--finalized">Filed · {current.arn}</span>}
             </div>
           )}
@@ -188,7 +192,94 @@ export function Returns() {
           </tbody>
         </table>
       </div>
+
+      {fileTarget && (
+        <FileReturnModal
+          ret={fileTarget}
+          onClose={() => setFileTarget(null)}
+          onFiled={() => { qc.invalidateQueries({ queryKey: ['returns'] }); qc.invalidateQueries({ queryKey: ['compliance'] }); }}
+        />
+      )}
     </section>
+  );
+}
+
+/**
+ * Portal filing (GSTR-1 / GSTR-3B) via the GSP. Two OTPs: a login OTP opens a
+ * session, then an EVC OTP signs and files. On success the GST portal returns an ARN.
+ */
+function FileReturnModal({ ret, onClose, onFiled }: { ret: GstReturn; onClose: () => void; onFiled: (arn: string) => void }) {
+  const [step, setStep] = useState<'start' | 'login' | 'evc' | 'done'>('start');
+  const [txn, setTxn] = useState('');
+  const [otp, setOtp] = useState('');
+  const [msg, setMsg] = useState('');
+  const [arn, setArn] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const label = ret.returnType === 'GSTR3B' ? 'GSTR-3B' : 'GSTR-1';
+
+  async function start() {
+    setBusy(true); setErr('');
+    try { const { data } = await api.post(`/returns/${ret.id}/file/start`, {}); setTxn(data.txn); setMsg(data.message); setStep('login'); }
+    catch (e: any) { setErr(e?.response?.data?.message ?? 'Could not start filing'); }
+    finally { setBusy(false); }
+  }
+  async function verify() {
+    if (!otp.trim()) { setErr('Enter the OTP sent to your registered mobile.'); return; }
+    setBusy(true); setErr('');
+    try { const { data } = await api.post(`/returns/${ret.id}/file/verify`, { txn, otp: otp.trim() }); setTxn(data.txn); setMsg(data.message); setOtp(''); setStep('evc'); }
+    catch (e: any) { setErr(e?.response?.data?.message ?? 'OTP verification failed'); }
+    finally { setBusy(false); }
+  }
+  async function confirm() {
+    if (!otp.trim()) { setErr('Enter the EVC OTP.'); return; }
+    setBusy(true); setErr('');
+    try { const { data } = await api.post(`/returns/${ret.id}/file/confirm`, { txn, evcOtp: otp.trim() }); setArn(data.arn); setStep('done'); onFiled(data.arn); toast(`Filed — ARN ${data.arn}`); }
+    catch (e: any) { setErr(e?.response?.data?.message ?? 'Filing failed'); }
+    finally { setBusy(false); }
+  }
+
+  const footer = step === 'start' ? <>
+    <button className="btn-ghost" onClick={onClose}>Cancel</button>
+    <button className="btn-primary" disabled={busy} onClick={start}>{busy ? 'Sending OTP…' : 'Send login OTP'}</button>
+  </> : step === 'login' ? <>
+    <button className="btn-ghost" onClick={onClose}>Cancel</button>
+    <button className="btn-primary" disabled={busy} onClick={verify}>{busy ? 'Verifying…' : 'Verify & save'}</button>
+  </> : step === 'evc' ? <>
+    <button className="btn-ghost" onClick={onClose}>Cancel</button>
+    <button className="btn-primary" disabled={busy} onClick={confirm}>{busy ? 'Filing…' : 'File return'}</button>
+  </> : <button className="btn-primary" onClick={onClose}>Done</button>;
+
+  return (
+    <Modal title={`File ${label} · ${ret.period}`} onClose={onClose} footer={footer}>
+      <ol className="filing-steps">
+        <li className={step === 'start' ? 'active' : 'done'}>Send login OTP</li>
+        <li className={step === 'login' ? 'active' : step === 'start' ? '' : 'done'}>Verify &amp; save on portal</li>
+        <li className={step === 'evc' ? 'active' : step === 'done' ? 'done' : ''}>Sign with EVC OTP &amp; file</li>
+      </ol>
+
+      {step === 'start' && (
+        <p className="muted small">
+          Filing authenticates with a one-time password sent to the mobile/email registered on the GST portal for
+          this GSTIN. You'll enter a <b>login OTP</b>, then an <b>EVC OTP</b> to sign the return. Nothing is filed until the last step.
+        </p>
+      )}
+      {(step === 'login' || step === 'evc') && (<>
+        {msg && <p className="muted small">{msg}</p>}
+        <label>{step === 'login' ? 'Login OTP' : 'EVC OTP'}
+          <input autoFocus inputMode="numeric" autoComplete="one-time-code" value={otp}
+            onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '')); setErr(''); }}
+            placeholder="6-digit OTP" maxLength={8} />
+        </label>
+      </>)}
+      {step === 'done' && (
+        <div className="pos" style={{ padding: '8px 0' }}>
+          ✓ {label} for {ret.period} filed successfully.<br />
+          <span className="muted small">ARN: <b className="mono">{arn}</b></span>
+        </div>
+      )}
+      {err && <p className="error">{err}</p>}
+    </Modal>
   );
 }
 

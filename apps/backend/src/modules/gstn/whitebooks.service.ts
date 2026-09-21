@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { decryptSecret } from '../../common/crypto/secret.util';
 
@@ -144,7 +145,7 @@ export class WhiteBooksService {
 
   // ── HTTP ──
 
-  private async http(method: 'GET' | 'POST', url: string, headers: Record<string, string>, body?: unknown): Promise<any> {
+  private async http(method: 'GET' | 'POST' | 'PUT', url: string, headers: Record<string, string>, body?: unknown): Promise<any> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30_000);
     try {
@@ -168,6 +169,14 @@ export class WhiteBooksService {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /** NIC/GSP replies to logical failures with HTTP 200 + status_cd "0". Surface that as an error. */
+  private nicError(res: any): string | null {
+    const cd = res?.status_cd ?? res?.data?.status_cd;
+    if (cd != null && String(cd) !== '1') return String(res?.status_desc ?? res?.data?.status_desc ?? res?.error?.message ?? res?.error ?? 'GST portal rejected the request');
+    if (res?.error && res?.data == null) return typeof res.error === 'string' ? res.error : String(res.error?.message ?? 'GST portal error');
+    return null;
   }
 
   private qs(params: Record<string, string | undefined>): string {
@@ -294,5 +303,93 @@ export class WhiteBooksService {
       ackNo: data?.AckNo != null ? String(data.AckNo) : undefined,
       raw: data,
     };
+  }
+
+  // ── GST Returns filing (GSTR-1 / GSTR-3B) — OTP + EVC, via the WhiteBooks GST product ──
+  //
+  // Two OTPs are involved (this is inherent to filing on pure API access, which
+  // replaces the portal password login):
+  //   1. Login OTP:  otprequest -> (user OTP) -> authtoken   → opens a session (txn)
+  //   2. EVC OTP:    otpforevc  -> (user OTP) -> retevcfile  → signs & files
+  // The session (txn) is cached, so repeat filings inside the window need only
+  // the EVC OTP. The `txn` correlation id threads the whole flow; the exact
+  // session-header semantics are per WhiteBooks' GST OpenAPI and should be
+  // re-confirmed against a live sandbox run.
+
+  private gstBase(cfg: GspConfig) { return { cfg, pc: this.productCreds(cfg, 'gst') }; }
+  private gstHeaders(cfg: GspConfig, pc: { clientId: string; clientSecret: string }, extra: Record<string, string>) {
+    return { ip_address: cfg.ipAddress, client_id: pc.clientId, client_secret: pc.clientSecret, ...extra };
+  }
+  private async gstCfg(): Promise<{ cfg: GspConfig; pc: { clientId: string; clientSecret: string } }> {
+    const cfg = await this.resolveConfig();
+    if (!cfg) throw new BadRequestException('GSP is not configured. Set the GST Client ID/Secret and account email in the master panel → GST API Config.');
+    return this.gstBase(cfg);
+  }
+
+  /** Step 1 — request the login OTP to the taxpayer's registered mobile/email. Returns a correlation txn. */
+  async gstOtpRequest(gstin: string, gstUsername: string): Promise<{ txn: string; message: string }> {
+    const { cfg, pc } = await this.gstCfg();
+    const txn = randomUUID().replace(/-/g, '').slice(0, 24);
+    const url = `${cfg.baseUrl}/authentication/otprequest?` + this.qs({ email: cfg.email });
+    const res = await this.http('GET', url, this.gstHeaders(cfg, pc, { gst_username: gstUsername, state_cd: gstin.slice(0, 2), txn }));
+    const bad = this.nicError(res);
+    if (bad) throw new BadRequestException(`GST portal: ${bad}`);
+    const data = res?.data ?? res;
+    return { txn: String(data?.txn ?? res?.txn ?? txn), message: data?.status_desc ?? data?.message ?? 'OTP sent to the registered mobile/email.' };
+  }
+
+  /** Step 2 — exchange the login OTP for a session auth token. */
+  async gstAuthToken(gstin: string, gstUsername: string, otp: string, txn: string): Promise<{ authToken: string; txn: string }> {
+    const { cfg, pc } = await this.gstCfg();
+    const url = `${cfg.baseUrl}/authentication/authtoken?` + this.qs({ email: cfg.email, otp });
+    const res = await this.http('GET', url, this.gstHeaders(cfg, pc, { gst_username: gstUsername, state_cd: gstin.slice(0, 2), txn }));
+    const bad = this.nicError(res);
+    if (bad) throw new BadRequestException(`GST portal: ${bad}`);
+    const data = res?.data ?? res;
+    const authToken = data?.auth_token ?? data?.authtoken ?? data?.['auth-token'] ?? res?.auth_token ?? res?.authtoken;
+    if (!authToken) throw new ServiceUnavailableException(`GST portal auth failed (check the OTP / API access): ${data?.status_desc ?? JSON.stringify(res).slice(0, 200)}`);
+    return { authToken: String(authToken), txn: String(data?.txn ?? txn) };
+  }
+
+  /** Save the generated return JSON to the GST portal (draft on the portal). */
+  async gstReturnSave(returnType: 'GSTR1' | 'GSTR3B', gstin: string, gstUsername: string, retPeriod: string, txn: string, authToken: string, payload: unknown): Promise<any> {
+    const { cfg, pc } = await this.gstCfg();
+    const path = returnType === 'GSTR1' ? '/gstr1/retsave' : '/gstr3b/retsave';
+    const url = `${cfg.baseUrl}${path}?` + this.qs({ email: cfg.email });
+    const res = await this.http('PUT', url, this.gstHeaders(cfg, pc, {
+      gstin, ret_period: retPeriod, gst_username: gstUsername, state_cd: gstin.slice(0, 2), txn, 'auth-token': authToken,
+    }), payload);
+    const bad = this.nicError(res);
+    if (bad) throw new ServiceUnavailableException(`GST portal (save): ${bad}`);
+    return res?.data ?? res;
+  }
+
+  /** Step 3 — send the EVC OTP used to sign the filing. */
+  async gstOtpForEvc(gstin: string, gstUsername: string, txn: string, authToken: string, formType: string): Promise<{ message: string }> {
+    const { cfg, pc } = await this.gstCfg();
+    const pan = gstin.slice(2, 12);
+    const url = `${cfg.baseUrl}/authentication/otpforevc?` + this.qs({ email: cfg.email, gstin, pan, form_type: formType });
+    const res = await this.http('GET', url, this.gstHeaders(cfg, pc, {
+      gst_username: gstUsername, state_cd: gstin.slice(0, 2), txn, 'auth-token': authToken,
+    }));
+    const bad = this.nicError(res);
+    if (bad) throw new BadRequestException(`GST portal: ${bad}`);
+    const data = res?.data ?? res;
+    return { message: data?.status_desc ?? data?.message ?? 'EVC OTP sent to the registered mobile.' };
+  }
+
+  /** Step 4 — file the return with the EVC OTP. Returns the ARN. */
+  async gstReturnFileEvc(returnType: 'GSTR1' | 'GSTR3B', gstin: string, gstUsername: string, retPeriod: string, evcOtp: string, txn: string, authToken: string, filePayload: unknown): Promise<{ arn: string; raw: any }> {
+    const { cfg, pc } = await this.gstCfg();
+    const pan = gstin.slice(2, 12);
+    const path = returnType === 'GSTR1' ? '/gstr1/retevcfile' : '/gstr3b/retevcfile';
+    const url = `${cfg.baseUrl}${path}?` + this.qs({ email: cfg.email, pan, evcotp: evcOtp });
+    const res = await this.http('POST', url, this.gstHeaders(cfg, pc, {
+      gstin, ret_period: retPeriod, gst_username: gstUsername, state_cd: gstin.slice(0, 2), txn, 'auth-token': authToken,
+    }), filePayload);
+    const data = res?.data ?? res;
+    const arn = data?.arn ?? data?.ARN ?? data?.ref_id ?? data?.reference_id;
+    if (!arn) throw new ServiceUnavailableException(`Filing was not accepted: ${data?.status_desc ?? JSON.stringify(res).slice(0, 300)}`);
+    return { arn: String(arn), raw: data };
   }
 }
