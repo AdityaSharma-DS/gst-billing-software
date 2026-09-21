@@ -7,6 +7,7 @@ import { Vendors } from './pages/Vendors';
 import { Inventory } from './pages/Inventory';
 import { Invoices } from './pages/Invoices';
 import { EwayBills } from './pages/EwayBills';
+import { EInvoices } from './pages/EInvoices';
 import { Purchases } from './pages/Purchases';
 import { BillForm } from './pages/BillForm';
 import { ImportBills } from './pages/ImportBills';
@@ -83,6 +84,7 @@ export default function App() {
         <Route path="expenses" element={<Expenses />} />
         <Route path="receipts" element={<Receipts />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="einvoice" element={<EInvoices />} />
         <Route path="eway" element={<EwayBills />} />
         <Route path="returns" element={<Returns />} />
         <Route path="compliance" element={<Compliance />} />

@@ -21,6 +21,7 @@ const nav = [
   { to: '/purchases', label: 'Purchases', Icon: IconPurchases },
   { to: '/receipts', label: 'Receipts', Icon: IconReceipts },
   { to: '/reports', label: 'Reports', Icon: IconReports },
+  { to: '/einvoice', label: 'E-Invoices (IRN)', Icon: IconReturns },
   { to: '/eway', label: 'E-Way Bills', Icon: IconReturns },
   { to: '/returns', label: 'GST Returns', Icon: IconReturns },
   { to: '/compliance', label: 'Compliance', Icon: IconReports },
