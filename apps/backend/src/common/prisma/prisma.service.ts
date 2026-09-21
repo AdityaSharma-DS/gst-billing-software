@@ -54,8 +54,27 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
-    await this.$connect();
-    await this.admin.$connect();
+    // Connect with a timeout so a bad/unreachable DB URL fails fast with a clear
+    // message (surfaced by the serverless handler) instead of hanging until the
+    // platform kills the function with an opaque FUNCTION_INVOCATION_FAILED.
+    await PrismaService.connectOrFail(this, 'APP_DATABASE_URL (runtime / gst_app role)');
+    await PrismaService.connectOrFail(this.admin, 'DATABASE_URL (privileged / admin client)');
+  }
+
+  private static async connectOrFail(client: PrismaClient, label: string) {
+    const timeoutMs = Number(process.env.DB_CONNECT_TIMEOUT_MS) || 8000;
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`DB connect timed out after ${timeoutMs}ms for ${label}. Check the connection string uses the Neon POOLED host with ?sslmode=require and that the role and password are correct.`)),
+        timeoutMs,
+      );
+    });
+    try {
+      await Promise.race([client.$connect(), timeout]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   async onModuleDestroy() {
