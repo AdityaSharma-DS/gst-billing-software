@@ -60,6 +60,7 @@ export default async function handler(req: Request, res: Response) {
       hasAppDbUrl: !!process.env.APP_DATABASE_URL,
       hasDbUrl: !!process.env.DATABASE_URL,
       hasJwt: !!process.env.JWT_SECRET,
+      hasEncryptionKey: !!process.env.ENCRYPTION_KEY,
     });
     return;
   }
