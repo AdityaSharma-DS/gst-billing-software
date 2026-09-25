@@ -3,6 +3,7 @@
  * One object per firm. Persisted in localStorage for now (server-sync is a
  * fast follow); company details for the preview come from the org profile.
  */
+import { ACCENTS, getAccent } from './theme';
 
 export type TextSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export const TEXT_SIZES: { id: TextSize; label: string }[] = [
@@ -115,6 +116,12 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
 
 const KEY = 'donicy.printSettings';
 
+/** The app's current theme accent as a hex, for defaulting the invoice colour. */
+export function currentAppAccentHex(): string {
+  try { return ACCENTS.find((a) => a.id === getAccent())?.swatch ?? DEFAULT_PRINT_SETTINGS.regular.colorHex; }
+  catch { return DEFAULT_PRINT_SETTINGS.regular.colorHex; }
+}
+
 /** Deep-merge stored settings over defaults so new fields always have a value. */
 function merge<T>(base: T, over: any): T {
   if (over == null || typeof over !== 'object' || Array.isArray(base)) return (over ?? base) as T;
@@ -126,8 +133,10 @@ function merge<T>(base: T, over: any): T {
 export function loadPrintSettings(): PrintSettings {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? merge(DEFAULT_PRINT_SETTINGS, JSON.parse(raw)) : DEFAULT_PRINT_SETTINGS;
-  } catch { return DEFAULT_PRINT_SETTINGS; }
+    if (raw) return merge(DEFAULT_PRINT_SETTINGS, JSON.parse(raw));
+  } catch { /* fall through to first-run defaults */ }
+  // First run: default the invoice accent to the app's current theme colour.
+  return { ...DEFAULT_PRINT_SETTINGS, regular: { ...DEFAULT_PRINT_SETTINGS.regular, colorHex: currentAppAccentHex() } };
 }
 export function savePrintSettings(s: PrintSettings) {
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ }
