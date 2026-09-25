@@ -1,9 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { REPORT_CATALOG, buildReport, ReportParams } from './report-catalog';
 
 @Injectable()
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** The report-centre catalogue (all report types + availability). */
+  catalog() {
+    return REPORT_CATALOG;
+  }
+
+  /** Build a report's tabular data for export (PDF/CSV). */
+  reportTable(tenantId: string, id: string, params: ReportParams) {
+    return buildReport(this.prisma, tenantId, id, params);
+  }
 
   async profitAndLoss(tenantId: string) {
     return this.prisma.withTenant(tenantId, async (tx) => {
