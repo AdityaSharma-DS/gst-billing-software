@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Logo } from '../components/Logo';
+import { AuthLayout } from '../components/AuthLayout';
 import { PasswordInput } from '../components/PasswordInput';
 
 export function Login() {
@@ -31,11 +32,11 @@ export function Login() {
   }
 
   return (
-    <div className="auth-wrap">
+    <AuthLayout>
       <form className="auth-card" onSubmit={onSubmit}>
         <div className="auth-logo"><Logo /></div>
-        <h1>Sign in</h1>
-        <p className="muted small">Don't have an account? <Link to="/register">Create one</Link></p>
+        <h1>Welcome back</h1>
+        <p className="auth-switch">Don't have an account? <Link to="/register">Create one</Link></p>
 
         <label>Email<input type="email" placeholder="you@business.com" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
         <label>Password<PasswordInput placeholder="Password" value={password} onChange={setPassword} autoComplete="current-password" /></label>
@@ -48,6 +49,6 @@ export function Login() {
         {error && <p className="error">{error}</p>}
         <button type="submit" className="btn-block" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

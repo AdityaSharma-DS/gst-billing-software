@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Logo } from '../components/Logo';
+import { AuthLayout } from '../components/AuthLayout';
 import { PasswordInput } from '../components/PasswordInput';
 import { isValidGstin } from '../lib/gstin';
 
@@ -41,11 +42,11 @@ export function Register() {
   }
 
   return (
-    <div className="auth-wrap">
+    <AuthLayout>
       <form className="auth-card" onSubmit={onSubmit}>
         <div className="auth-logo"><Logo /></div>
         <h1>Create your account</h1>
-        <p className="muted small">Start billing free for 14 days. Already have an account? <Link to="/login">Sign in</Link></p>
+        <p className="auth-switch">Already have an account? <Link to="/login">Sign in</Link></p>
 
         <label>Business Name<input autoFocus placeholder="e.g. Sharma Traders" value={form.businessName} onChange={(e) => set('businessName', e.target.value)} /></label>
         <label>Your Name<input placeholder="Full name" value={form.fullName} onChange={(e) => set('fullName', e.target.value)} /></label>
@@ -57,6 +58,6 @@ export function Register() {
         <button type="submit" className="btn-block" disabled={busy}>{busy ? 'Creating your account…' : 'Create account'}</button>
         <p className="muted small center">No card required. You can invite your team and set up GST after signing in.</p>
       </form>
-    </div>
+    </AuthLayout>
   );
 }
