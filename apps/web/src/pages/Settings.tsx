@@ -8,6 +8,7 @@ import { useBarcodeScanner } from '../components/useBarcodeScanner';
 import { getScannerPrefs, setScannerPrefs, ScannerPrefs } from '../lib/scanner';
 import { toast } from '../components/Toaster';
 import { ACCENTS, Accent, Theme, getTheme, getAccent, getContrast, setTheme, setAccent, setContrast } from '../lib/theme';
+import { PrintSettings } from './PrintSettings';
 
 interface TeamUser { id: string; email: string; fullName: string; role: 'ADMIN' | 'ACCOUNTANT' | 'VIEWER'; isActive: boolean; lastLoginAt?: string | null; }
 
@@ -169,7 +170,7 @@ const FIN_YEARS = ['2024-25', '2025-26', '2026-27', '2027-28', '2028-29'];
 
 type Org = Record<string, any>;
 
-const SETTINGS_TABS = ['Theme', 'Company Details', 'Terms & Conditions', 'Notifications', 'General', 'App Update'] as const;
+const SETTINGS_TABS = ['Theme', 'Company Details', 'Print', 'Terms & Conditions', 'Notifications', 'General', 'App Update'] as const;
 type SettingsTab = typeof SETTINGS_TABS[number];
 
 /** Appearance controls — theme, accent colour, contrast (per-browser). */
@@ -287,6 +288,8 @@ export function Settings() {
       </div>
 
       {tab === 'Theme' && <ThemeSection />}
+
+      {tab === 'Print' && <PrintSettings />}
 
       {tab === 'App Update' && (
         <div className="card" style={{ maxWidth: 520 }}>
