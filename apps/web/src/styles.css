@@ -122,6 +122,7 @@ button { font-family: var(--font-sans); cursor: pointer; }
 .auth-main { display: grid; place-items: center; background: var(--color-surface); padding: var(--space-8) var(--space-6); }
 .auth-main .auth-card { background: transparent; box-shadow: none; border: 0; width: 100%; max-width: 400px; padding: 0; }
 .auth-main .auth-card h1 { text-align: left; font-size: 28px; }
+.auth-main .auth-card > p:not(.center) { text-align: left; }
 .auth-main .auth-logo { display: none; }
 .auth-switch { font-size: 13px; color: var(--color-text-muted); margin: 0 0 var(--space-3); text-align: left; }
 .auth-switch a { color: var(--color-primary); font-weight: var(--fw-semibold); text-decoration: none; }

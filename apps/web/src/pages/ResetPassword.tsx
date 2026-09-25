@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Logo } from '../components/Logo';
+import { AuthLayout } from '../components/AuthLayout';
 import { PasswordInput } from '../components/PasswordInput';
 
 export function ResetPassword() {
@@ -30,7 +31,7 @@ export function ResetPassword() {
   }
 
   return (
-    <div className="auth-wrap">
+    <AuthLayout>
       <form className="auth-card" onSubmit={onSubmit}>
         <div className="auth-logo"><Logo /></div>
         <h1>Set a new password</h1>
@@ -56,6 +57,6 @@ export function ResetPassword() {
           </>
         )}
       </form>
-    </div>
+    </AuthLayout>
   );
 }

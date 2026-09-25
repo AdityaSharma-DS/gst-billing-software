@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Logo } from '../components/Logo';
+import { AuthLayout } from '../components/AuthLayout';
 
 export function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -24,7 +25,7 @@ export function ForgotPassword() {
   }
 
   return (
-    <div className="auth-wrap">
+    <AuthLayout>
       <form className="auth-card" onSubmit={onSubmit}>
         <div className="auth-logo"><Logo /></div>
         <h1>Reset password</h1>
@@ -50,6 +51,6 @@ export function ForgotPassword() {
           </>
         )}
       </form>
-    </div>
+    </AuthLayout>
   );
 }
