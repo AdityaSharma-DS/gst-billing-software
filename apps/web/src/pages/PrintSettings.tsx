@@ -7,6 +7,7 @@ import {
   COLOR_SWATCHES, THEMES, THERMAL_THEMES, TEXT_SIZES, ITEM_COLS, ItemColKey,
 } from '../lib/printSettings';
 import { renderInvoiceHtml, InvCompany, InvData } from '../lib/invoiceRender';
+import { ACCENTS, getAccent } from '../lib/theme';
 
 /** Sample bill for the live preview (company comes from the org profile). */
 const SAMPLE: InvData = {
@@ -110,6 +111,7 @@ function Toggle({ label, checked, onChange, info }: { label: string; checked: bo
 
 function RegularPanel({ R, setR, layoutTab, setLayoutTab }: { R: PS['regular']; setR: (p: Partial<PS['regular']>) => void; layoutTab: 'layout' | 'colors'; setLayoutTab: (t: 'layout' | 'colors') => void }) {
   const setCol = (k: ItemColKey, v: boolean) => setR({ itemTable: { ...R.itemTable, columns: { ...R.itemTable.columns, [k]: v } } });
+  const currentAccentHex = ACCENTS.find((a) => a.id === getAccent())?.swatch ?? ACCENTS[0].swatch;
   return (
     <>
       <div className="subtabs">
@@ -129,13 +131,29 @@ function RegularPanel({ R, setR, layoutTab, setLayoutTab }: { R: PS['regular']; 
           ))}
         </div>
       ) : (
-        <div className="color-grid">
-          {COLOR_SWATCHES.map((c) => (
-            <button key={c.hex} title={c.name} aria-label={c.name}
-              className={`swatch ${R.colorHex === c.hex ? 'swatch--active' : ''}`}
-              style={{ background: c.hex }} onClick={() => setR({ colorHex: c.hex })} />
-          ))}
-        </div>
+        <>
+          <div className="ps-color-head">
+            <span className="section-label" style={{ margin: 0 }}>App theme colours</span>
+            <button type="button" className="link-btn" onClick={() => setR({ colorHex: currentAccentHex })}>Use current theme colour</button>
+          </div>
+          <div className="color-grid theme-accents">
+            {ACCENTS.map((a) => (
+              <button key={a.id} title={`${a.label}${a.swatch === currentAccentHex ? ' (current app theme)' : ''}`} aria-label={a.label}
+                className={`swatch ${R.colorHex === a.swatch ? 'swatch--active' : ''}`}
+                style={{ background: a.swatch }} onClick={() => setR({ colorHex: a.swatch })}>
+                {a.swatch === currentAccentHex && <span className="swatch-current">Current</span>}
+              </button>
+            ))}
+          </div>
+          <div className="section-label" style={{ marginTop: 12 }}>More colours</div>
+          <div className="color-grid">
+            {COLOR_SWATCHES.map((c) => (
+              <button key={c.hex} title={c.name} aria-label={c.name}
+                className={`swatch ${R.colorHex === c.hex ? 'swatch--active' : ''}`}
+                style={{ background: c.hex }} onClick={() => setR({ colorHex: c.hex })} />
+            ))}
+          </div>
+        </>
       )}
 
       <h4 className="section-label">Company Info / Header</h4>

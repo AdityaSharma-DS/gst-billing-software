@@ -235,6 +235,10 @@ button { font-family: var(--font-sans); cursor: pointer; }
 .color-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: var(--space-2); padding: var(--space-2) 0 var(--space-3); }
 .color-grid .swatch { aspect-ratio: 1; border-radius: 6px; border: 2px solid transparent; cursor: pointer; }
 .color-grid .swatch--active { border-color: var(--color-text); box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary); }
+.color-grid.theme-accents { grid-template-columns: repeat(4, 1fr); max-width: 260px; }
+.color-grid .swatch { position: relative; display: grid; place-items: center; }
+.swatch-current { font-size: 9px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: rgba(0,0,0,.28); padding: 1px 5px; border-radius: 999px; }
+.ps-color-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin: var(--space-2) 0 6px; }
 @media (max-width: 860px) { .ps-body { grid-template-columns: 1fr; } .ps-settings { max-height: none; } .ps-preview { position: static; } .ps-frame { height: 70vh; } }
 .inline-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--color-text-muted); }
 .inline-field input, .inline-field select { font-size: 13px; }
